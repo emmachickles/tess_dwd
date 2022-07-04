@@ -1,7 +1,3 @@
-# with open('/home/submit/echickle/foo.txt', 'w') as f:
-#     f.write('help')
-
-
 output_dir = '/scratch/echickle/bls/'
 img_dir = output_dir + 'imgs/'
 data_dir = '/scratch/data/tess/lcur/spoc/raws/'
@@ -29,10 +25,6 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 import lc 
 import pandas as pd 
-
-# with open('/home/submit/echickle/foo.txt', 'a') as f:
-#     f.write('ow')
-
 
 
 # lcfile = '/scratch/submit/tess/data/tesscurl_sector_5_lc/tess2018319095959-s0005-0000000471013547-0125-s_lc.fits'
