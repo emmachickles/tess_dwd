@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import pdb
+# import pdb
 import os
 import sys
 import gc
@@ -29,7 +29,8 @@ import pandas as pd
 
 # lcfile = '/scratch/submit/tess/data/tesscurl_sector_5_lc/tess2018319095959-s0005-0000000471013547-0125-s_lc.fits'
 
-lcfile = '/scratch/echickle/tmp/tess2021204101404-s0041-0000001201247611-0212-s_lc.fits'
+# lcfile = '/scratch/echickle/tmp/tess2021204101404-s0041-0000001201247611-0212-s_lc.fits'
+lcfile = '/data/submit/echickle/tess2021204101404-s0041-0000001201247611-0212-s_lc.fits'
 hdul = fits.open(lcfile)
 t = hdul[1].data['TIME']
 y = hdul[1].data['PDCSAP_FLUX']
@@ -42,50 +43,79 @@ y = np.delete(y, inds)
 inds = np.nonzero(~np.isnan(y))
 t, y = t[inds], y[inds]
 dy = np.ones(y.shape)
-plt.figure()
-plt.plot(t, y, '.k', ms=1)
-plt.xlabel('TIME')
-plt.ylabel('PDCSAP_FLUX')
-plt.title('TIC 1201247611, S41-20s')
-plt.savefig('/scratch/echickle/tmp/TIC1201247611_lc.png')
+# plt.figure()
+# plt.plot(t, y, '.k', ms=1)
+# plt.xlabel('TIME')
+# plt.ylabel('PDCSAP_FLUX')
+# plt.title('TIC 1201247611, S41-20s')
+# plt.savefig('/scratch/echickle/tmp/TIC1201247611_lc.png')
 
 # >> pmin: minimum period (minutes)
 # >> pmax: maximum period (days)
 # >> qmin: minimum transit duraction (t_trans / period)
-pmin=3
-# pmax=True
-pmax=0.05 # = 72 minutes
-# qmin = 0.005
-# qmax = 0.01
-qmin=0.005
-qmax=0.05
-t, y, dy, period, bls_power_best, freqs, power = BLS(t,y,dy,pmin=pmin,pmax=pmax,
-                                       qmin=qmin,qmax=qmax,remove=True)
+
+pmin_array = [2,4,8]
+pmax_array = [0.01, 0.05, 0.1]
+qmin_array = [0.0005, 0.005, 0.01]
+qmax_array = [0.02, 0.05, 0.1]
+remove_array = [True, False]
+
+n_iter = 0
+for pmin in pmin_array:
+    for pmax in pmax_array:
+        for qmin in qmin_array:
+            for qmax in qmax_array:
+                for remove in remove_array:
+
+                    # pmin=3
+                    # # pmax=True
+                    # pmax=0.05 # = 72 minutes
+                    # # qmin = 0.005
+                    # # qmax = 0.01
+                    # qmin=0.005
+                    # qmax=0.05
+                    # remove=False
+                    t, y, dy, period, bls_power_best, freqs, power = BLS(t,y,dy,pmin=pmin,pmax=pmax,
+                                                                         qmin=qmin,qmax=qmax,remove=remove)
 
 
-plt.figure()
-plt.plot(freqs, power, '.k', ms=1)
-plt.xlim([0, 50])
-plt.xlabel('Frequency')
-plt.ylabel('BLS Power')
-plt.savefig('/scratch/echickle/tmp/TIC1201247611_bls.png')
 
-# >> compute phase curve
-ts = TimeSeries(time=Time(t, format='jd'), data={'flux': y})
-ts_folded = ts.fold(period=period*u.d) 
+                    # >> compute phase curve
+                    ts = TimeSeries(time=Time(t, format='jd'), data={'flux': y})
+                    ts_folded = ts.fold(period=period*u.d) 
 
-sorted_inds = np.argsort(ts_folded['time'])
-folded_t = ts_folded['time'][sorted_inds]
-folded_y = ts_folded['flux'][sorted_inds]
+                    sorted_inds = np.argsort(ts_folded['time'])
+                    folded_t = ts_folded['time'][sorted_inds]
+                    folded_y = ts_folded['flux'][sorted_inds]
 
-plt.figure()
-plt.plot(folded_t.value, folded_y.value, '.k', ms=1)
-plt.xlabel('Phase')
-plt.ylabel('PDCSAP_FLUX')
-plt.title('TIC 1201247611, pmin: '+str(qmin)+', pmax: '+str(pmax)+', qmin: '+str(qmin)+', qmax: '+str(qmax))
-fname = '/scratch/echickle/tmp/TIC1201247611_pc_qmin'+str(qmin)+'_qmax'+str(qmax)+'_period'+str(period)+'_sig'+str(bls_power_best)+'.png'
-plt.savefig(fname)
-print('Saved '+fname)
+                    fig, ax = plt.subplots(nrows=2)
+                    ax[0].set_.title('TIC 1201247611, pmin: '+str(qmin)+', pmax: '+str(pmax)+', qmin: '+str(qmin)+', qmax: '+str(qmax)+', remove: '+str(remove))
+                    ax[0].plot(freqs, power, '.k', ms=1)
+                    ax[0].set_xlim([0,50])
+                    ax[0].set_xlabel('Frequency')
+                    ax[0].set_ylabel('BLS Power')
+                    ax[1].plot(folded_t.value, folded_y.value, '.k', ms=1)
+                    ax[1].set_xlabel('Phase')
+                    ax[1].set_ylabel('PDCSAP_FLUX')
+                    # fname = '/data/submit/echickle/out/TIC1201247611_pc_qmin'+str(qmin)+'_qmax'+str(qmax)+'_period'+str(period)+'_sig'+str(bls_power_best)+'.png'
+                    fname = '/data/submit/echickle/out/TIC1201247611-%02d'%n_iter+'.png'
+                    fig.savefig(fname)
+
+# plt.figure()
+# plt.plot(freqs, power, '.k', ms=1)
+# plt.xlim([0, 50])
+# plt.xlabel('Frequency')
+# plt.ylabel('BLS Power')
+# plt.savefig('/scratch/echickle/tmp/TIC1201247611_bls.png')
+
+# plt.figure()
+# plt.plot(folded_t.value, folded_y.value, '.k', ms=1)
+# plt.xlabel('Phase')
+# plt.ylabel('PDCSAP_FLUX')
+# plt.title('TIC 1201247611, pmin: '+str(qmin)+', pmax: '+str(pmax)+', qmin: '+str(qmin)+', qmax: '+str(qmax))
+# fname = '/scratch/echickle/tmp/TIC1201247611_pc_qmin'+str(qmin)+'_qmax'+str(qmax)+'_period'+str(period)+'_sig'+str(bls_power_best)+'.png'
+# plt.savefig(fname)
+# print('Saved '+fname)
 
 # with open('/home/submit/echickle/foo.txt', 'w') as f:
 #     f.write('Period '+str(period)+'\nPower '+str(bls_power_best))

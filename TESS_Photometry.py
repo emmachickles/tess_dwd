@@ -19,7 +19,6 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 # >> edited by etc 220603
-import pdb
 import sys
 import os
 sys.path.append(os.getcwd())
@@ -32,13 +31,29 @@ import matplotlib.pyplot as plt
 
 # p = [str(pp) for pp in pathlib.Path('Sector'+str(sector)+'/').glob('*-'+str(int(CCD))+'-'+str(int(quad))+'-*.fits')]
 
-data_dir = '/scratch/echickle/data/sector_30_ffic/'
+# data_dir = '/scratch/echickle/data/sector_30_ffic/'
+data_dir = '/data/submit/echickle/data/sector_41_ffic/'
+out_dir = '/data/submit/echickle/data/sector_41_lc/'
+
 p = [data_dir+f for f in os.listdir(data_dir)]
-sources=np.loadtxt('tess_dwd/WDs.txt',usecols=(1,2))
+sources=np.loadtxt('/home/submit/echickle/work/tess_dwd/WDs.txt',usecols=(1,2))
 # <<
-
-
 catalog_main=SkyCoord(ra=sources[:,0]*u.degree, dec=sources[:,1]*u.degree, frame='icrs')
+
+def download_ccd(curl_file, data_dir, cam, ccd):
+    with open(curl_file, 'r') as f:
+        lines = f.readlines()[1:]
+    for line in lines:
+        ffi_cam = int(line.split(' ')[5].split('-')[2])
+        ffi_ccd = int(line.split(' ')[5].split('-')[3])
+        if ffi_cam == cam and ffi_ccd == ccd:
+            line = line.split(' ')
+            line[5] = data_dir+line[5]
+            line = ' '.join(line)
+            os.system(line)
+            print(line)
+#download_ccd('/data/submit/echickle/data/tesscurl_sector_41_ffic.sh', data_dir, 3, 4)
+
 
 def source_list(f,catalog):
 
@@ -128,6 +143,17 @@ N_in=1.5
 N_out=2
 background = SkyCircularAnnulus(trimmed_catalog, N_in*21*u.arcsec,N_out*21*u.arcsec)
 # p=p[:2] # >> etc 220603
+
+suffix = '-3-4'
+ticid_sources=np.loadtxt('/home/submit/echickle/work/tess_dwd/WDs.txt',usecols=(0))
+ticid = []
+for i in range(len(trimmed_catalog)):
+    idx, d2d, d3d = trimmed_catalog[i].match_to_catalog_sky(catalog_main)
+    ticid.append(ticid_sources[idx])
+np.save(out_dir+'id'+suffix+'.npy', ticid)
+
+
+n_iter = 0
 for f in p:
     #coord= SkyCoord(ra=242.891526160*u.degree, dec=63.142131440*u.degree, frame='icrs')
     
@@ -135,35 +161,38 @@ for f in p:
         t, fluxes=process(f,aperture,background)
         ts.append(t)
         LC.append(fluxes)
+        n_iter += 1
+        print(n_iter)
+        if n_iter // 10:
+            np.save(out_dir+'ts'+suffix+'.npy', np.array(ts))
+            np.save(out_dir+'lc'+suffix+'.npy', np.array(LC).T)
+            
     except:
         pass
 
+
+    
 ts=np.array(ts)    
 LC=np.array(LC)
 print(LC)
 LC=LC.T
 
 # >> edited by etc 220603
-np.save('/scratch/echickle/dwd/ts.npy', ts)
-np.save('/scratch/echickle/dwd/lc.npy', LC)
 
-ticid_sources=np.loadtxt('tess_dwd/WDs.txt',usecols=(0))
-ticid = []
-for i in range(len(trimmed_catalog)):
-    idx, d2d, d3d = trimmed_catalog[i].match_to_catalog_sky(catalog_main)
-    ticid.append(ticid_sources[idx])
-np.save('/scratch/echickle/dwd/id.npy', ticid)
+np.save(out_dir+'ts'+suffix+'.npy', ts)
+np.save(out_dir+'lc'+suffix+'.npy', LC)
 
-lc = np.load('/scratch/echickle/dwd/lc.npy').T
-ts = np.load('/scratch/echickle/dwd/ts.npy')
 
-os.makedirs('/scratch/echickle/dwd/raw_lcs')
-for i in range(len(lc)):
-    plt.figure()
-    plt.plot(ts, lc[i], '.k')
-    plt.xlabel('Time')
-    plt.ylabel('Flux')
-    plt.savefig('/scratch/echickle/dwd/raw_lcs/lc_'+str(i)+'.png')
-    plt.close()
-    print(i)
-# <<
+# lc = np.load('/scratch/echickle/dwd/lc.npy').T
+# ts = np.load('/scratch/echickle/dwd/ts.npy')
+
+# os.makedirs('/scratch/echickle/dwd/raw_lcs')
+# for i in range(len(lc)):
+#     plt.figure()
+#     plt.plot(ts, lc[i], '.k')
+#     plt.xlabel('Time')
+#     plt.ylabel('Flux')
+#     plt.savefig('/scratch/echickle/dwd/raw_lcs/lc_'+str(i)+'.png')
+#     plt.close()
+#     print(i)
+# # <<

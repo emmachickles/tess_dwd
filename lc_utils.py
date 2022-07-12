@@ -2,6 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
+def extract_lc():
+    import pandas as pd
+    
+    # >> load white dwarf catalog
+    wd_cat  = pd.read_csv('/home/echickle/work/tess_dwd/WDs.txt', header=None, sep='\s+')
+
 def load_hipercam(logfile):
     '''Loads logfile produced by HiPERCAM reduce pipeline. 
     5 CCDs: u, g, r, i, z bands.'''
