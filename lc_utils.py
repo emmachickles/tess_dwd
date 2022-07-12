@@ -24,7 +24,7 @@ def load_hipercam(logfile):
 
     return
     
-def make_phase_curve(t, y, period, plot=True, output_dir='', prefix=''):
+def make_phase_curve(t, y, period, plot=True, output_dir='', prefix='', freqs=None, power=None, ticid=None):
     '''TODO:
     * bin phase curve
     * change x axis to orbital phase
@@ -41,11 +41,27 @@ def make_phase_curve(t, y, period, plot=True, output_dir='', prefix=''):
     folded_y = ts_folded['flux'][sorted_inds]
 
     if plot:
-        plt.figure()
-        norm_y = folded_y.value / np.nanmedian(folded_y.value)
-        plt.plot(folded_t.jd, norm_y, '.k', ms=1)
-        plt.xlabel('Time [days]')
-        plt.ylabel('Flux')
+        fig, ax = plt.subplots(nrows=2)
+        ax[0].set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
+        ax[0].plot(freqs, power, '.k', ms=1)
+        ax[0].set_xlim([0,50])
+        ax[0].set_xlabel('Frequency [1/days]')
+        ax[0].set_ylabel('BLS Power')
+        ax[1].plot(folded_t.value, folded_y.value, '.k', ms=1)
+        ax[1].set_xlabel('Phase')
+        ax[1].set_ylabel('PDCSAP_FLUX')
+        # fname = '/data/submit/echickle/out/TIC1201247611_pc_qmin'+str(qmin)+'_qmax'+str(qmax)+'_period'+str(period)+'_sig'+str(bls_power_best)+'.png'
+        # fname = '/data/submit/echickle/out/TIC1201247611-%02d'%n_iter+'.png'
+        # fname = img_dir+'TIC1201247611-%02d'%n_iter+'-p'+str(period)+'.png'
+        fig.tight_layout()
+
+
+
+        # plt.figure()
+        # norm_y = folded_y.value / np.nanmedian(folded_y.value)
+        # plt.plot(folded_t.jd, norm_y, '.k', ms=1)
+        # plt.xlabel('Time [days]')
+        # plt.ylabel('Flux')
         plt.savefig(output_dir+prefix+'phase_curve.png')
         print('Saved '+output_dir+prefix+'phase_curve.png')
 
