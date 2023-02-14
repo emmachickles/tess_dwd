@@ -12,8 +12,76 @@ def plot_lc(t, y, output_dir, title='', suffix=''):
     plt.savefig(fname, dpi=300)
     print('Saved '+fname)
 
+output_dir = '/home/submit/echickle/'
 
-output_dir = '/scratch/echickle/dwd/'
+ticid_list = [1883504789, 1201294971]
+period_list = [226.71, 411.9]
+
+for i in range(len(ticid_list)):
+
+    camccd = None
+    while type(camccd) == type(None):
+        for cam in [1,2,3,4]:
+            for ccd in [1,2,3,4]:
+                suffix = '-'+str(cam)+'-'+str(ccd)+'.npy'
+                ticid = np.load(data_dir+'id'+suffix).astype('int')
+                ind = np.nonzero(ticid == ticid_list[i])
+                if len(ind[0]) > 0:
+                    camccd = suffix
+
+    suffix = camccd
+    ticid = np.load(data_dir+'id'+suffix).astype('int')
+    ind = np.nonzero(ticid == ticid_list[i])                    
+    
+    flux = np.load(data_dir+'lc'+suffix)
+    time = np.load(data_dir+'ts'+suffix)
+    t = time
+    y = flux[ind][0]
+
+    # >> remove nans
+    inds = np.nonzero(~np.isnan(y))
+    t, y = t[inds], y[inds]
+
+    med = np.median(y)
+    std = np.std(y)
+
+    # >> sigma-clip to 5 sigma
+    inds = np.nonzero( (y > med - 5*std) * (y < med + 5*std) )
+    t, y = t[inds], y[inds]
+
+    # >> normalize        
+    if np.median(y) < 0:
+        y = y / np.abs(med) + 2.
+    else:
+        y = y/med
+
+    
+
+    a = 0.1227 # >> in solar radii
+    r_1 = 0.0298 / a # >> in units of a
+    r_2 = 0.0275 / a
+    sbratio = (19200 / 26300)**4 # >> s_2 / s_1
+    incl = 82.12 # >> deg
+    period = period_list[i]/1440 # >> days
+    # m_1 = 0.323 # >> in solar masses
+    # m_2 = 0.335
+    q = 0.96
+    heat_2 = 0.5
+
+
+    flux = ellc.lc(t,radius_1=r_1, radius_2=r_2,incl=incl,sbratio=sbratio,
+                   ld_1=ld_1, ldc_1=ldc_1,shape_1='roche',shape_2='roche',
+                   grid_1='default',grid_2='default', f_s=f_s, f_c=f_c,
+                   period=period, a=a, q=q, heat_2=heat_2)
+    plt.figure()
+    plt.plot(t, flux, '.b', ms=1)    
+    plt.plot(t, y, '.k', ms=1)
+    plt.xlabel('Time [minutes]')
+    plt.ylabel('Relative flux')
+    fname = output_dir+'lc.png'
+    plt.savefig(fname, dpi=300)
+    print('Saved '+fname)
+
 
 # based off https://github.com/pmaxted/ellc/blob/master/examples/batman/run_batman.py
 
@@ -89,22 +157,22 @@ output_dir = '/scratch/echickle/dwd/'
 #                period=period, a=a, q=q, heat_2=heat_2)
 # plot_lc(t, flux, output_dir, title='7 min', suffix='_7min')
 
-a = 0.1227 # >> in solar radii
-r_1 = 0.0298 / a # >> in units of a
-r_2 = 0.0275 / a
-sbratio = (19200 / 26300)**4 # >> s_2 / s_1
-incl = 82.12 # >> deg
-period = 527.93 # >> s
-# t   = np.linspace(-1000, 1000,20000) # >> s
-t = np.linspace(-period, period, 1000)
-m_1 = 0.323 # >> in solar masses
-m_2 = 0.335
-q = m_2/m_1
-heat_2 = 0.5
+# a = 0.1227 # >> in solar radii
+# r_1 = 0.0298 / a # >> in units of a
+# r_2 = 0.0275 / a
+# sbratio = (19200 / 26300)**4 # >> s_2 / s_1
+# incl = 82.12 # >> deg
+# period = 527.93 # >> s
+# # t   = np.linspace(-1000, 1000,20000) # >> s
+# t = np.linspace(-period, period, 1000)
+# m_1 = 0.323 # >> in solar masses
+# m_2 = 0.335
+# q = m_2/m_1
+# heat_2 = 0.5
 
 
-flux = ellc.lc(t,radius_1=r_1, radius_2=r_2,incl=incl,sbratio=sbratio,
-               ld_1=ld_1, ldc_1=ldc_1,shape_1='roche',shape_2='roche',
-               grid_1='default',grid_2='default', f_s=f_s, f_c=f_c,
-               period=period, a=a, q=q, heat_2=heat_2)
-plot_lc(t, flux, output_dir, title='8.8 min', suffix='_8min')
+# flux = ellc.lc(t,radius_1=r_1, radius_2=r_2,incl=incl,sbratio=sbratio,
+#                ld_1=ld_1, ldc_1=ldc_1,shape_1='roche',shape_2='roche',
+#                grid_1='default',grid_2='default', f_s=f_s, f_c=f_c,
+#                period=period, a=a, q=q, heat_2=heat_2)
+# plot_lc(t, flux, output_dir, title='8.8 min', suffix='_8min')
