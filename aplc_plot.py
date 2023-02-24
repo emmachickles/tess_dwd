@@ -8,8 +8,8 @@ import sys
 sys.path.insert(0, "/home/submit/echickle/work/")    
 from KBB_Utils.KBB_Utils.Period_Finding import BLS
 
-n_std=3
-wind=0.05
+n_std=5
+wind=0.1
 
 data_dir = '/data/submit/echickle/data/sector_41_lc/'
 suffix = '-3-4'
@@ -49,7 +49,7 @@ t, y = t[inds], y[inds]
 # >> BLS
 dy = np.ones(y.shape)
 _,_,_, period, bls_power_best, freqs, power, dur, epo = \
-    BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
+    BLS(t,y,dy,pmin=20,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
 
 # >> fold
 t = t % per * 1440
@@ -83,6 +83,12 @@ plt.xlabel('Period [minutes]')
 plt.ylabel('BLS Power')
 plt.savefig('/home/submit/echickle/gaia14aae_aplc_spectrum_zoom.png')
 
+plt.figure()
+plt.hist(power,bins=150)
+plt.xlabel('Power')
+plt.ylabel('Frequency bins')
+plt.xscale('log')
+plt.savefig('/home/submit/echickle/gaia14aae_aplc_hist.png')
 
 # t, y, flag = lcu.prep_lc(t, y, n_std=3, wind=0.1)
 # lcu.plot_phase_curve(t,y, per, '/home/submit/echickle/')

@@ -8,8 +8,8 @@ import sys
 sys.path.insert(0, "/home/submit/echickle/work/")    
 from KBB_Utils.KBB_Utils.Period_Finding import BLS
 
-n_std=3
-wind=0.05
+n_std=5
+wind=0.1
 
 # hdul = fits.open('/data/submit/echickle/foo/lc/hlsp_tglc_tess_ffi_gaiaid-1629388752470472704-s0014-cam3-ccd1_tess_v1_llc.fits')
 hdul = fits.open('/data/submit/echickle/foo1/lc/hlsp_tglc_tess_ffi_gaiaid-1629388752470472704-s0041-cam3-ccd4_tess_v1_llc.fits')
@@ -17,6 +17,7 @@ hdul = fits.open('/data/submit/echickle/foo1/lc/hlsp_tglc_tess_ffi_gaiaid-162938
 t = hdul[1].data['time']
 y = hdul[1].data['cal_psf_flux']
 per = 49.7/1440
+# per = 1/20.727432959364357
 
 # >> remove nans
 inds = np.nonzero(~np.isnan(y))
@@ -42,7 +43,7 @@ t, y = t[inds], y[inds]
 # >> BLS
 dy = np.ones(y.shape)
 _,_,_, period, bls_power_best, freqs, power, dur, epo = \
-    BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
+    BLS(t,y,dy,pmin=20,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
 
 # >> fold
 t = t % per * 1440
@@ -63,7 +64,8 @@ plt.ylabel('Relative Flux')
 plt.savefig('/home/submit/echickle/gaia14aae_tglc_phase_curve.png')
 
 plt.figure()
-plt.plot(freqs, power, '-k', lw=0.5, alpha=0.7)
+#plt.plot(freqs, power, '-k', lw=0.5, alpha=0.7)
+plt.plot(freqs, power, '.k', ms=0.5, alpha=0.7)
 plt.xlabel('Frequency [1/days]')
 plt.ylabel('BLS Power')
 plt.title('period: '+str(round(period*1440,2))+' min')
@@ -75,6 +77,23 @@ plt.xlim([0,120])
 plt.xlabel('Period [minutes]')
 plt.ylabel('BLS Power')
 plt.savefig('/home/submit/echickle/gaia14aae_tglc_spectrum_zoom.png')
+
+plt.figure()
+plt.hist(power, bins=150)
+plt.xlabel('Power')
+plt.ylabel('Frequency bins')
+plt.savefig('/home/submit/echickle/gaia14aae_tglc_hist.png')
+
+plt.figure()
+plt.hist(power,bins=500)
+plt.xlabel('Power')
+plt.ylabel('Frequency bins')
+plt.xscale('log')
+plt.savefig('/home/submit/echickle/gaia14aae_tglc_hist.png')
+
+
+counts, bins, _ = plt.hist(power,bins=500)
+p = bins[np.argmax(counts)]
 
 # t, y, flag = lcu.prep_lc(t, y, n_std=3, wind=0.1)
 # lcu.plot_phase_curve(t,y, per, '/home/submit/echickle/')

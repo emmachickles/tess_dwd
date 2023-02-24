@@ -117,7 +117,7 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
     
 
 def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=None, power=None, ticid=None,
-                     bins=200, t0=None):
+                     bins=200, t0=None, bls=True):
     '''TODO:
     * bin phase curve
     * change x axis to orbital phase
@@ -135,79 +135,56 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
     
     if type(dy) == type(None):
         dy = np.ones(y.shape)
-    
-    ts = TimeSeries(time=Time(t, format='jd'), data={'flux': y, 'flux_err': dy})
-    if type(t0) == type(None):
-        ts_folded = ts.fold(period=period*u.d)
-    else:
-        ts_folded = ts.fold(period=period*u.d, epoch_time=Time(t0, format='jd')) 
 
-    sorted_inds = np.argsort(ts_folded['time'])
-    folded_t = ts_folded['time'].value[sorted_inds]
-    folded_y = ts_folded['flux'].value[sorted_inds]
-    folded_dy = ts_folded['flux_err'].value[sorted_inds]
-
-    if bins:
-        folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, folded_dy, bins)
+    # >> fold
+    t = t % period 
+    inds = np.argsort(t)
+    folded_t, folded_y, folded_dy = t[inds], y[inds], dy[inds]
+        
+    folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, folded_dy, bins)
     if output_dir:
         if type(freqs) == type(None):
-            fig, ax = plt.subplots(nrows=1, figsize=(8, 4))
-            if type(ticid) != type(None):
-                ax.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
-            else:
-                ax.set_title('period: '+str(round(period*1440,2))+' min')
-
-            folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
-            shift = np.max(folded_t) - np.min(folded_t)        
-            if bins:
-                ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
-                               fmt='.k', ms=1, elinewidth=1)
-                ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
-                               fmt='.k', ms=1, elinewidth=1)
-
-            else:
-                ax.plot(folded_t*1440, folded_y, '.k', ms=1)
-                ax.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-            ax.set_xlabel('Time [minutes]')
-            ax.set_ylabel('Relative Flux')
-            fig.tight_layout()
-
-            plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
-            print('Saved '+output_dir+prefix+'phase_curve.png')
+            _,_,_, _, bls_power_best, freqs, power, dur, epo = \
+                BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
 
             
+        fig, ax = plt.subplots(nrows=3, figsize=(8, 8))
+        if type(ticid) != type(None):
+            ax[0].set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
         else:
-            fig, ax = plt.subplots(nrows=3, figsize=(8, 8))
-            if type(ticid) != type(None):
-                ax[0].set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
-            else:
-                ax[0].set_title('period: '+str(round(period*1440,2))+' min')
-            ax[0].plot(freqs, power, '.k', ms=1, alpha=0.5)
-            ax[0].set_xlabel('Frequency [1/days]')
-            ax[0].set_ylabel('BLS Power')
+            ax[0].set_title('period: '+str(round(period*1440,2))+' min')
+        ax[0].plot(freqs, power, '.k', ms=1, alpha=0.5)
+        ax[0].set_xlabel('Frequency [1/days]')
 
-            ax[1].plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-            ax[1].set_xlim([0,120])
-            ax[1].set_xlabel('Period [minutes]')
+        ax[1].plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+        ax[1].set_xlim([0,120])
+        ax[1].set_xlabel('Period [minutes]')
+
+        if bls:
+            ax[0].set_ylabel('BLS Power')        
             ax[1].set_ylabel('BLS Power')
+        else:
+            ax[0].set_ylabel('LS Power')        
+            ax[1].set_ylabel('LS Power')
 
-            folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
-            shift = np.max(folded_t) - np.min(folded_t)        
-            if bins:
-                ax[2].errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
-                               fmt='.k', ms=1, elinewidth=1)
-                ax[2].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                               fmt='.k', ms=1, elinewidth=1)
+            
+        folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
+        shift = np.max(folded_t) - np.min(folded_t)        
+        if bins:
+            ax[2].errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.k', ms=1, elinewidth=1)
+            ax[2].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.k', ms=1, elinewidth=1)
 
-            else:
-                ax[2].plot(folded_t*1440, folded_y, '.k', ms=1)
-                ax[2].plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-            ax[2].set_xlabel('Time [minutes]')
-            ax[2].set_ylabel('Relative Flux')
-            fig.tight_layout()
+        else:
+            ax[2].plot(folded_t*1440, folded_y, '.k', ms=1)
+            ax[2].plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
+        ax[2].set_xlabel('Time [minutes]')
+        ax[2].set_ylabel('Relative Flux')
+        fig.tight_layout()
 
-            plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
-            print('Saved '+output_dir+prefix+'phase_curve.png')
+        plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
+        print('Saved '+output_dir+prefix+'phase_curve.png')
 
     else:
         return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
@@ -260,4 +237,27 @@ def plot_orbital_phase_curve(ax, t, y, dy, freq, q, phi0, **kwargs):
     ax.set_xlabel('$\phi$ ($f = %.3f$)' % (freq))
     ax.set_ylabel('$y$')
 
+def make_panel_plot(t,y,freqs,power,period,prefix, bins=200):
+    gs = fig.add_gridspec(nrows=2, ncols=2, figsize=(10,10))
+    ax1 = fig.add_subplot(gs[:, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, 1])
     
+    inds = np.nonzero(~np.isnan(y))
+    t, y = t[inds], y[inds]
+    folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
+    shift = np.max(folded_t) - np.min(folded_t)
+    fig, ax = plt.subplots(figsize=(10,6))
+    if type(bins) != type(None):
+        ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                       fmt='.k', ms=1, elinewidth=1)
+        ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                       fmt='.k', ms=1, elinewidth=1)
+    else:
+        ax.plot(folded_t*1440, folded_y, '.k', ms=1, alpha=0.3)
+        ax.plot((folded_t+shift)*1440, folded_y, '.k', ms=1, alpha=0.3) 
+    ax.set_xlabel('Time [minutes]')
+    ax.set_ylabel('Relative Flux')
+    fig.tight_layout()
+    plt.savefig(out_dir+'phase_curve.png', dpi=300)
+    print('Saved '+out_dir+'phase_curve.png')

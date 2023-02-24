@@ -24,9 +24,9 @@ from astropy.coordinates import SkyCoord
 from KBB_Utils.KBB_Utils import LC_Tools
 
 wd_cat    = '/data/submit/echickle/WDs.txt'
-data_dir  = '/data/submit/tess/echickle/s0057/'
-out_dir   = '/data/submit/tess/echickle/s0057-lc/'
-curl_file = '/data/submit/echickle/data/tesscurl_sector_41_ffic.sh'
+data_dir  = '/data/submit/tess/echickle/s0061/'
+out_dir   = '/data/submit/tess/echickle/s0061-lc/'
+# curl_file = '/data/submit/echickle/data/tesscurl_sector_41_ffic.sh'
 
 # >> light curve parameters
 N_ap  = 0.7
@@ -37,29 +37,85 @@ mult_output = False # >> produce multiple light curves per source
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam = sys.argv[1]
+if len(sys.argv) >= 4:
+    cam = sys.argv[1]
+    ccd = sys.argv[2]
 
-def run_sector(data_dir, out_dir, wd_cat, curl_file, cam=None, mult_output=False):
+def run_sector(data_dir, out_dir, wd_cat, cam=None, ccd=None, mult_output=False):
     # >> load white dwarf catalog
     sources=np.loadtxt(wd_cat, usecols=(0,1,2))
     ticid_main=sources[:,0].astype('int')
-    catalog_main=SkyCoord(ra=sources[:,1]*u.degree, dec=sources[:,2]*u.degree,
+    catalog_main=SkyCoord(ra=sources[:,1]*u.degree,
+                          dec=sources[:,2]*u.degree,
                           frame='icrs')
     if cam:
         cam_list = [int(cam)]
     else:
         cam_list = [1,2,3,4]
 
+    if ccd:
+        ccd_list = [int(ccd)]
+    else:
+        ccd_list = [1,2,3,4]
+
+    # print(cam_list)
+    # print(ccd_list)
+    # with open('/home/submit/echickle/foo.txt', 'w') as f:
+    #     f.write(str(cam_list))
+    #     f.write('/n')
+    #     f.write(str(ccd_list))
+
     for cam in cam_list:
         print('Running camera '+str(cam))
-        for ccd in [1,2,3,4]:
+        for ccd in ccd_list:
             ccd_dir = 'cam{}-ccd{}/'.format(cam, ccd)
             
             p = [data_dir+ccd_dir+f for f in os.listdir(data_dir+ccd_dir)]
-            run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, wd_cat,
+            run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, 
                     mult_output=mult_output)
             print('Finished cam {} ccd {}!'.format(cam, ccd))
 
+def run_target(data_dir, out_dir, cam, ccd, name, ra, dec):
+
+    ticid_main=np.array([name])
+    catalog_main=SkyCoord(ra=[ra*u.degree],
+                          dec=[dec*u.degree],
+                          frame='icrs')
+    
+    ccd_dir = 'cam{}-ccd{}/'.format(cam, ccd)
+    suffix = '-'+name
+
+    p = [data_dir+ccd_dir+f for f in os.listdir(data_dir+ccd_dir)]
+    run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, 
+            mult_output=mult_output, suffix=suffix)
+    
+            
+def run_UCBs():
+    from astroquery.mast import Catalogs    
+    # Kevin Burdge's Ultra-Compact Binaries
+
+    fname = "/data/submit/echickle/Kevin\'s UCBs - UCBs.csv"
+
+    with open(fname, 'r') as f:
+        lines = f.readlines()[1:]
+    id_main = []
+    ra, dec = [], []
+    for i in range(len(lines)):
+        id_main.append(lines[i].split(',')[1])
+        ra.append(float(lines[i].split(',')[2]))
+        dec.append(float(lines[i].split(',')[3]))
+
+        
+        
+    id_main, ra, dec = np.array(id_main), np.array(ra), np.array(dec)
+    catalog_main=SkyCoord(ra=ra*u.degree,
+                          dec=dec*u.degree,
+                          frame='icrs')
+        
+    
+    pass
+
+            
 def download_sector(data_dir, out_dir, wd_cat, curl_file, cam=None):
     if cam:
         cam_list = [int(cam)]
@@ -211,8 +267,9 @@ def process(f,sky_aperture,background,central_coord, tica=True):
         
     return t, phot_bkgsub
                 
-def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, wd_cat, mult_output=False):
-    suffix = '-'+str(cam)+'-'+str(ccd)
+def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
+            suffix=''):
+    suffix = '-'+str(cam)+'-'+str(ccd)+suffix
     
     LC=[]
     ts=[]
@@ -274,87 +331,25 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, wd_cat, mult_output=
     co = np.array([ra, dec]).T
     np.save(out_dir+'co'+suffix+'.npy', co)        
 
-run_sector(data_dir, out_dir, wd_cat, curl_file, cam=cam, mult_output=mult_output)
+# run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
+
+# s, cam, ccd, name, ra, dec = 56, 2, 1, "ZTF J222827.07+494916.4", 337.1127, 49.82125
+# s, cam, ccd, name, ra, dec = 56, 2, 2, "ZTF J213056.71+442046.5", 322.7362856, 44.34622882
+# s, cam, ccd, name, ra, dec = 56, 3, 2, "ZTF J205515.98+465106.5", 313.8165708, 46.8517723
+# s, cam, ccd, name, ra, dec = 57, 2, 2, "ZTF J224342.97+544206.1", 340.9290431, 52.70166019
+# s, cam, ccd, name, ra, dec = 57, 2, 2, "ZTF J222827.07+494916.4", 337.1127, 49.82125
+# s, cam, ccd, name, ra, dec = 57, 3, 2, "ZTF J235115.4+630527.7", 357.8141279, 63.0910333
+# s, cam, ccd, name, ra, dec = 57, 2, 3, "ZTF J232020.43+375030.8", 350.0851861, 37.84185019
+
+# data_dir   = '/data/submit/tess/echickle/s00{}/'.format(s)
+# out_dir   = '/data/submit/tess/echickle/KBUCB-lc/'
+# run_target(data_dir, out_dir, cam, ccd, name, ra, dec)
+
+mydir = "/data/submit/tess/echickle/"
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 4)
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 3)
+# download_ccd(mydir+"tesscurl_sector_58_ffic.sh",mydir+"s0058", 2, 3)
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 2, 4)
+download_ccd(mydir+"tesscurl_sector_60_ffic.sh",mydir+"s0060", 1, 3)
 
 # ==============================================================================
-
-# -- getting ra dec ------------------------------------------------------------
-# sources=np.loadtxt(wd_cat, usecols=(0,1,2))
-# ticid_main=sources[:,0].astype('int')
-# catalog_main=SkyCoord(ra=sources[:,1]*u.degree, dec=sources[:,2]*u.degree,
-#                       frame='icrs')
-# for cam in [3]:
-#     for ccd in [4]:
-#         ticid_ccd = np.load(out_dir + 'id-{}-{}.npy'.format(cam, ccd))
-#         ra, dec = [], []
-#         for i in range(len(ticid_ccd)):
-#             ind = np.nonzero(ticid_main == ticid_ccd[i])[0][0]
-#             ra.append(catalog_main[ind].ra.degree)
-#             dec.append(catalog_main[ind].dec.degree)
-#         co = np.array([ra, dec]).T
-#         np.save(out_dir+'co-{}-{}.npy'.format(cam, ccd), co)
-        
-# -- plotting ------------------------------------------------------------------
-# for i in range(len(LC)):
-#     plt.figure()
-#     plt.plot(ts, LC[i], '.k')    
-#     plt.title('N_ap: {}, N_in: {}, N_out: {}'.format(N_ap, N_in, N_out))
-#     plt.xlabel('Time')
-#     plt.ylabel('Flux')
-#     plt.savefig(out_dir+'lc_'+str(i)+'.png', dpi=300)
-#     plt.close()
-#     print(i)
-
-                # pix_aperture = sky_aperture[i].to_pixel(w)
-                # phot_table = aperture_photometry(image, pix_aperture)  
-                # background_pix_aperture = background[j].to_pixel(w)
-                # background_phot_table = aperture_photometry(image, background_pix_aperture)  
-
-                # norm=background_pix_aperture.area/pix_aperture.area
-                # print(norm)
-
-                # for col in phot_table.colnames:  
-                #     phot_table[col].info.format = '%.8g'  # for consistent table out
-
-                # phot.append(phot_table['aperture_sum'].value-background_phot_table['aperture_sum'].value/norm)
-
-                        # pix_aperture = sky_aperture.to_pixel(w)
-        # phot_table = aperture_photometry(image, pix_aperture)  
-
-        # background_pix_aperture = background.to_pixel(w)
-        # background_phot_table = aperture_photometry(image, background_pix_aperture)  
-
-        # norm=background_pix_aperture.area/pix_aperture.area
-        # print(norm)
-
-        # for col in phot_table.colnames:  
-        #     phot_table[col].info.format = '%.8g'  # for consistent table out
-
-        # return t, phot_table['aperture_sum'].value-background_phot_table['aperture_sum'].value/norm
-
-    # trimmed_catalog, ticid=source_list('/data/submit/tess/echickle/s0056/cam1ccd1/hlsp_tica_tess_ffi_s0056-o1-00690247-cam1-ccd1_tess_v01_img.fits',catalog_main, ticid_main)
-        
-    # flag = True
-    # i = 0
-    # while flag:
-    #     try:
-    #         trimmed_catalog, ticid, central_coord=source_list(p[i],catalog_main, ticid_main)
-    #     except:
-    #         i+=1
-    #     else:
-    #         flag = False
-
-    # !!
-    # if cam == 2 and ccd == 2:
-    #     co = SkyCoord(322.7362855032135,44.346236059843456, unit='deg')
-    #     trimmed_catalog = SkyCoord(list(trimmed_catalog) + [co])
-    #     ticid = np.append(ticid, 0)
-
-        # trimmed_catalog = SkyCoord([trimmed_catalog[0], co])
-        # ticid= [ticid[0], 0000]
-    
-    # ticid_sources=np.loadtxt(wd_cat,usecols=(0))
-    # ticid = []
-    # for i in range(len(trimmed_catalog)):
-    #     idx, d2d, d3d = trimmed_catalog[i].match_to_catalog_sky(catalog_main)
-    #     ticid.append(ticid_sources[idx])

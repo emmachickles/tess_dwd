@@ -1,9 +1,9 @@
 # output_dir = '/data/submit/echickle/out/'
 # img_dir = output_dir + 's41-ztf/'
 # data_dir = '/data/submit/echickle/data/sector_41_lc/'
-output_dir = '/data/submit/tess/echickle/'
-img_dir = output_dir + 's0056-targ/'
-data_dir = '/data/submit/tess/echickle/s0056-lc/'
+output_dir = '/data/submit/tess/echickle/KBUCB-png/'
+# img_dir = output_dir + 's0056-targ/'
+data_dir = '/data/submit/tess/echickle/KBUCB-lc/'
 
 
 # DWD: ./sector-05/tess2018319095959-s0005-0000000471013547-0125-s_lc.fits
