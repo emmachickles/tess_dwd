@@ -4,14 +4,19 @@ n_std = 3
 wind  = 0.5
 pmin = 400 / 60 # Nyquist in minutes
 
-output_dir = '/data/submit/tess/echickle/'
-data_dir   = '/data/submit/tess/echickle/s0061-lc/'
+output_dir = '/home/echickle/out/'
+data_dir   = '/home/echickle/data/s0061/s0061-lc/'
+
+bls_dir    = output_dir + 's0061-bls-230228/'
+ls_dir    = output_dir + 's0061-ls-230228/'
+diag_dir   = output_dir + 's0061-diag-230228/'
+
+# output_dir = '/data/submit/tess/echickle/'
+# data_dir   = '/data/submit/tess/echickle/s0061-lc/'
+
 # bls_dir    = output_dir + 's0061-bls-230223-test/'
 # ls_dir     = output_dir + 's0061-ls-230223-test/'
 # diag_dir    = output_dir + 's0061-diag-230223-test/'
-bls_dir    = output_dir + 's0061-bls-230223-nstd{}-wind{}/'.format(n_std, wind)
-ls_dir    = output_dir + 's0061-ls-230223-nstd{}-wind{}/'.format(n_std, wind)
-diag_dir   = output_dir + 's0061-diag-230223-nstd{}-wind{}/'.format(n_std, wind)
 
 # ------------------------------------------------------------------------------
 
@@ -27,7 +32,8 @@ import gc
 import fnmatch
 sys.path.insert(0, "/home/submit/echickle/work/")
 
-from KBB_Utils.KBB_Utils.Period_Finding import BLS, LS_Full
+from Period_Finding import BLS, LS_Full
+# from KBB_Utils.KBB_Utils.Period_Finding import BLS, LS_Full
 
 from astropy.io import fits
 from astropy.timeseries import TimeSeries
@@ -74,7 +80,7 @@ time, flux = time[inds], flux[:,inds]
 # ticid = np.delete(ticid, comm1) 
 
 # >> compute BLS
-for i in range(len(flux))[330:]:
+for i in range(len(flux)):
     print(i)
     y = flux[i]
     t = time
@@ -92,7 +98,9 @@ for i in range(len(flux))[330:]:
 
         # -- compute BLS ---------------------------------------------------
         _, _, _, period, bls_power_best, freqs, power, dur, epo = \
-            BLS(t,y,dy,pmin=pmin,pmax=0.25,qmin=0.005,qmax=0.05,remove=False)
+            BLS(t,y,dy,pmin=pmin,pmax=0.25,qmin=0.005,qmax=0.05,remove=True)
+
+        pdb.set_trace()
 
         # # -- compute LS --------------------------------------------------
         # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = LS_Full(t,y,dy,pmin=pmin,

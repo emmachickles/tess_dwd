@@ -2,6 +2,35 @@ import cuvarbase.bls as bls
 import cuvarbase.lombscargle as gls
 import numpy as np
 
+def frequency_grid(t,y,pmin=3,pmax=True,qmin=2e-2,qmax=0.12):
+        baseline = max(t) - min(t)
+        df = qmin / baseline
+        if type(pmax) == type(True):
+                fmin = 4/baseline
+        else:
+                fmin=1/pmax
+        fmax = 1440.0/pmin # pmin in minutes
+        nf = int(np.ceil((fmax - fmin) / df))
+        freqs = fmin + df * np.arange(nf)
+        return freqs
+
+def remove_harmonics(freqs, power, dur=None, epo=None):
+        freqs_to_remove = []
+        for i in [2,3,4,5,6]:
+                centr = 86400 / (200*i)
+                freqs_to_remove.append([centr - 0.0001, centr + 0.0001])
+        for pair in freqs_to_remove:
+                idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
+                freqs = freqs[idx]
+                power = power[idx]
+                if dur is not None:
+                        dur = dur[idx]
+                        epo = epo[idx]
+        if dur is not None:
+                return freqs, power, dur, epo
+        else: 
+                return freqs, power
+        
 def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
 
         t=t-np.mean(t)
@@ -69,19 +98,31 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         #                                 p_best = new_pow
         #         # import pdb
         #         # pdb.set_trace()
+        # if remove:
+        #         freq=360
+        #         delta=0.025
+        #         freqs_to_remove=[]
+        #         n=1
+        #         while n>0:
+        #                 freqs_to_remove.append([freq*n-delta/(n/5)**0.5,freq*n+delta/(n/5)**0.5])
+        #                 n=n-0.02
+        #                 #freqs_to_remove = [[3e-2,4e-2], [49.99,50.01], [48.99,49.01], [47.99,48.01], [46.99,47.01], [45.99,46.01], [3.95,4.05], [2.95,3.05], [1.95,2.05], [0.95,1.05], [0.48, 0.52], [0.32, 0.34], [0.24, 0.26], [0.19, 0.21]]
+        #         for pair in freqs_to_remove:
+        #                 idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
+        #                 freqs = freqs[idx]
+        #                 bls_power = bls_power[idx]
+
+
         if remove:
-                freq=360
-                delta=0.025
-                freqs_to_remove=[]
-                n=1
-                while n>0:
-                        freqs_to_remove.append([freq*n-delta/(n/5)**0.5,freq*n+delta/(n/5)**0.5])
-                        n=n-0.02
-                        #freqs_to_remove = [[3e-2,4e-2], [49.99,50.01], [48.99,49.01], [47.99,48.01], [46.99,47.01], [45.99,46.01], [3.95,4.05], [2.95,3.05], [1.95,2.05], [0.95,1.05], [0.48, 0.52], [0.32, 0.34], [0.24, 0.26], [0.19, 0.21]]
+                freqs_to_remove = []
+                for i in [2,3,4,5,6]:
+                        centr = 86400 / (200*i)
+                        freqs_to_remove.append([centr - 0.0001, centr + 0.0001])
                 for pair in freqs_to_remove:
                         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
                         freqs = freqs[idx]
                         bls_power = bls_power[idx]
+        
         f_best = freqs[np.argmax(bls_power)]
         period=1.0/f_best
 

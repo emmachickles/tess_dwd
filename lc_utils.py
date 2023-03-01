@@ -51,10 +51,11 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
             ccd=None, coord=None, output_dir=None):
     from wotan import flatten
 
-    if diag:
-        import sys
-        sys.path.insert(0, "/home/submit/echickle/work/")    
-        from KBB_Utils.KBB_Utils.Period_Finding import BLS
+    # if diag:
+    #     import sys
+    #     sys.path.insert(0, "/home/submit/echickle/work/")    
+    #     from KBB_Utils.KBB_Utils.Period_Finding import BLS
+    from Period_Finding import BLS
 
     flag = False
     
