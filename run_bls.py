@@ -4,19 +4,19 @@ n_std = 3
 wind  = 0.5
 pmin = 400 / 60 # Nyquist in minutes
 
-output_dir = '/home/echickle/out/'
-data_dir   = '/home/echickle/data/s0061/s0061-lc/'
+# output_dir = '/home/echickle/out/'
+# data_dir   = '/home/echickle/data/s0061/s0061-lc/'
 
-bls_dir    = output_dir + 's0061-bls-230228/'
-ls_dir    = output_dir + 's0061-ls-230228/'
-diag_dir   = output_dir + 's0061-diag-230228/'
+# bls_dir    = output_dir + 's0061-bls-230228/'
+# ls_dir    = output_dir + 's0061-ls-230228/'
+# diag_dir   = output_dir + 's0061-diag-230228/'
 
-# output_dir = '/data/submit/tess/echickle/'
-# data_dir   = '/data/submit/tess/echickle/s0061-lc/'
+output_dir = '/data/submit/tess/echickle/'
+data_dir   = '/data/submit/tess/echickle/s0061-lc/'
 
-# bls_dir    = output_dir + 's0061-bls-230223-test/'
-# ls_dir     = output_dir + 's0061-ls-230223-test/'
-# diag_dir    = output_dir + 's0061-diag-230223-test/'
+bls_dir    = output_dir + 's0061-bls-230301/'
+ls_dir     = output_dir + 's0061-ls-230301/'
+diag_dir    = output_dir + 's0061-diag-230301/'
 
 # ------------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ for i in range(len(flux)):
         _, _, _, period, bls_power_best, freqs, power, dur, epo = \
             BLS(t,y,dy,pmin=pmin,pmax=0.25,qmin=0.005,qmax=0.05,remove=True)
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
         # # -- compute LS --------------------------------------------------
         # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = LS_Full(t,y,dy,pmin=pmin,
