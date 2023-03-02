@@ -8,6 +8,19 @@ def extract_lc():
     # >> load white dwarf catalog
     wd_cat  = pd.read_csv('/home/echickle/work/tess_dwd/WDs.txt', header=None, sep='\s+')
 
+def atlas_lc(f):
+    data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)
+    coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
+    RA=np.mean(coords[:,0])
+    Dec=np.mean(coords[:,1])
+
+    # >> filter by limiting magnitude
+    fil=np.loadtxt(f,usecols=(5),skiprows=0,dtype=str)
+    fil=fil[data[:,3]>17.5]
+    data=data[data[:,3]>17.5]
+
+    return data, RA, Dec
+
 def load_hipercam(logfile):
     '''Loads logfile produced by HiPERCAM reduce pipeline. 
     5 CCDs: u, g, r, i, z bands.'''
@@ -239,8 +252,30 @@ def plot_orbital_phase_curve(ax, t, y, dy, freq, q, phi0, **kwargs):
     ax.set_xlabel('$\phi$ ($f = %.3f$)' % (freq))
     ax.set_ylabel('$y$')
 
-def make_panel_plot(t,y,freqs,power,period,prefix, bins=200):
-    gs = fig.add_gridspec(nrows=2, ncols=2, figsize=(10,10))
+def hr_digaram(gaia_tab, wd_cat, ticid, ax): 
+    from astropy.io import fits
+
+    hdul = fits.open(gaia_tab)
+    gid = hdul[1].data['source_id']
+    gmag = hdul[1].data['phot_g_mean_mag']
+    bp_rp = hdul[1].data['bp_rp']
+    
+    ax.plot(bp_rp, gmag, '.k', alpha=0.2, ms=0.05)
+    ax.set_xlim([-0.6, 5])
+    ax.set_ylim([21, 3.3])
+    ax.set_xlabel('Gaia BP-RP')
+    ax.set_ylabel('Absolute Magnitude (Gaia G)')
+
+    wd_cat  = pd.read_csv(wd_cat, header=None, sep='\s+')
+    ticid_cat = wd_cat[0].to_numpy()
+    ind = np.nonzero(ticid_cat == int(ticid))[0][0]
+    mag = 
+    
+   
+    
+def make_panel_plot(t,y,freqs,power,period,prefix,gaia_tab,bins=200):
+
+    gs = fig.add_gridspec(nrows=2, ncols=2, figsize=(10,6))
     ax1 = fig.add_subplot(gs[:, 0])
     ax2 = fig.add_subplot(gs[0, 1])
     ax3 = fig.add_subplot(gs[1, 1])
