@@ -199,6 +199,7 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
 
         plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
         print('Saved '+output_dir+prefix+'phase_curve.png')
+        plt.close()
 
     else:
         return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
@@ -297,3 +298,4 @@ def make_panel_plot(t,y,freqs,power,period,prefix,gaia_tab,bins=200):
     fig.tight_layout()
     plt.savefig(out_dir+'phase_curve.png', dpi=300)
     print('Saved '+out_dir+'phase_curve.png')
+    plt.close()

@@ -40,7 +40,8 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         # set up search parameters
         search_params = dict(qmin=qmin, qmax=qmax,
                      # The logarithmic spacing of q
-                            dlogq=0.1,
+                            # dlogq=0.1,
+                            dlogq=0.5,
 
                      # Number of overlapping phase bins
                      # to use for finding the best phi0
@@ -114,19 +115,36 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         #                 bls_power = bls_power[idx]
 
 
+        # fname = open('/home/submit/echickle/foo.txt', 'a')
+        
         if remove:
                 freqs_to_remove = []
-                for i in [2,3,4,5,6]:
-                        centr = 86400 / (200*i)
-                        freqs_to_remove.append([centr - 0.0001, centr + 0.0001])
+                # freqs_to_remove.append([86400/400 - 0.1, 86400/400 + 0.1])
+                # freqs_to_remove.append([86400/600 - 0.07, 86400/600 + 0.07])
+                # freqs_to_remove.append([86400/800 - 0.03, 86400/800 + 0.03])
+ 
+                freqs_to_remove.append([86400/(200*2) - 1.2, 86400/(200*2) + 1.2])
+                freqs_to_remove.append([86400/500 - 1, 86400/500 + 1])                
+                freqs_to_remove.append([86400/(200*3) - 0.1, 86400/(200*3) + 0.1])
+                freqs_to_remove.append([86400/600 - 1, 86400/600 + 1])    
+                freqs_to_remove.append([86400/(200*4) - 0.1, 86400/(200*4) + 0.1])
+                freqs_to_remove.append([86400/(200*5) - 3, 86400/(200*5) + 3])     
+                freqs_to_remove.append([86400/(200*6) - 3, 86400/(200*6) + 3]) 
+                freqs_to_remove.append([86400/(200*7) - 2, 86400/(200*7) + 2])               
+                # for i in [2,3,4]:
+                #         centr = 86400 / (200*i)
+                #         freqs_to_remove.append([centr - 0.05, centr + 0.05])
+                        # fname.write(str(i)+' '+str(centr)+'\n')
+                        # fname.write(str(i)+' '+str([centr - 0.0001, centr + 0.0001])+'\n')
                 for pair in freqs_to_remove:
                         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
                         freqs = freqs[idx]
                         bls_power = bls_power[idx]
         
         f_best = freqs[np.argmax(bls_power)]
+        # fname.write('f_best '+str(f_best)+'\n\n')
+        # fname.close()
         period=1.0/f_best
-
         q_best, phi0_best = sols[np.argmax(bls_power)]        
 
         # -- significance of peak ----------------------------------------------
