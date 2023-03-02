@@ -136,22 +136,30 @@ def download_sector(data_dir, out_dir, wd_cat, curl_file, cam=None):
         for ccd in [1,2,3,4]: 
             download_ccd(curl_file, data_dir, cam, ccd)
             print('Downloaded cam {} ccd {}!'.format(cam, ccd))
-            os.system('rm '+data_dir+ccd_dir+'*.fits')
-            os.rmdir(data_dir+ccd_dir)
+            # os.system('rm '+data_dir+ccd_dir+'*.fits')
+            # os.rmdir(data_dir+ccd_dir)
+
+def download_cam(cam, curl_file, data_dir):
+    print('Running camera '+str(cam))
+    for ccd in [1,2,3,4]: 
+        download_ccd(curl_file, data_dir, cam, ccd)
+        print('Downloaded cam {} ccd {}!'.format(cam, ccd))
+            
             
 def download_ccd(curl_file, data_dir, cam, ccd):
     ccd_dir = 'cam{}-ccd{}/'.format(cam, ccd)
-    os.makedirs(data_dir+ccd_dir)            
+    os.makedirs(data_dir+ccd_dir, exist_ok=True)
     with open(curl_file, 'r') as f:
         lines = f.readlines()[1:]
     for line in lines:
         ffi_cam = int(line.split(' ')[5].split('-')[2])
         ffi_ccd = int(line.split(' ')[5].split('-')[3])
-        if ffi_cam == cam and ffi_ccd == ccd:            
+        if ffi_cam == int(cam) and ffi_ccd == int(ccd):
             line = line.split(' ')
             line[5] = data_dir+ccd_dir+line[5]
-            line = ' '.join(line)
-            os.system(line)
+            if not os.path.exists(line[5]):
+                line = ' '.join(line)
+                os.system(line)
 
 def source_list(f,catalog,ticid, tica=True):
 
@@ -340,7 +348,12 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     co = np.array([ra, dec]).T
     np.save(out_dir+'co'+suffix+'.npy', co)        
 
-run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
+data_dir = '/home/echickle/data/s0060/s0060/'
+curl_file = data_dir + 'tesscurl_sector_60_ffic.sh'
+# download_ccd(curl_file, data_dir, cam, ccd)
+download_cam(cam, curl_file, data_dir)
+    
+# run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
 
 # s, cam, ccd, name, ra, dec = 56, 2, 1, "ZTF J222827.07+494916.4", 337.1127, 49.82125
 # s, cam, ccd, name, ra, dec = 56, 2, 2, "ZTF J213056.71+442046.5", 322.7362856, 44.34622882
