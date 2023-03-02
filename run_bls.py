@@ -1,8 +1,16 @@
 # -- inputs --------------------------------------------------------------------
 
 n_std = 3
-wind  = 0.5
+wind  = 0.1
 pmin = 400 / 60 # Nyquist in minutes
+pmax = 0.15 # >> 3 hours = 0.125 days
+qmin = 0.01
+qmax = 0.05
+
+# pmax = 0.25
+# qmin = 0.005
+# qmax = 0.05
+
 
 # output_dir = '/home/echickle/out/'
 # data_dir   = '/home/echickle/data/s0061/s0061-lc/'
@@ -11,12 +19,16 @@ pmin = 400 / 60 # Nyquist in minutes
 # ls_dir    = output_dir + 's0061-ls-230228/'
 # diag_dir   = output_dir + 's0061-diag-230228/'
 
-output_dir = '/data/submit/tess/echickle/'
-data_dir   = '/data/submit/tess/echickle/s0061-lc/'
+import sys
+cam = sys.argv[1]
+ccd = sys.argv[2]
 
-bls_dir    = output_dir + 's0061-bls-230301/'
-ls_dir     = output_dir + 's0061-ls-230301/'
-diag_dir    = output_dir + 's0061-diag-230301/'
+output_dir = '/data/submit/tess/echickle/'
+data_dir   = '/data/submit/echickle/s0061-lc/'
+
+bls_dir    = output_dir + 's0061-bls-{}-{}-230302/'.format(cam,ccd)
+ls_dir     = output_dir + 's0061-ls-{}-{}-230302/'.format(cam,ccd)
+diag_dir    = output_dir + 's0061-diag-{}-{}-230302/'.format(cam,ccd)
 
 # ------------------------------------------------------------------------------
 
@@ -27,7 +39,6 @@ import matplotlib.pyplot as plt
 
 import pdb
 import os
-import sys
 import gc
 import fnmatch
 sys.path.insert(0, "/home/submit/echickle/work/")
@@ -44,14 +55,12 @@ from wotan import flatten
 import lc_utils as lcu
 import gc
 
-cam = sys.argv[1]
-ccd = sys.argv[2]
 
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(ls_dir, exist_ok=True)
 os.makedirs(diag_dir, exist_ok=True)
 
-fail_txt = output_dir + 'cam'+str(cam)+'-failed.txt'
+fail_txt = output_dir + 'cam'+str(cam)+'-ccd'+str(ccd)+'-failed.txt'
 with open(fail_txt, 'w') as f:
     f.write('')
 
@@ -69,15 +78,17 @@ time, flux = time[inds], flux[:,inds]
 # coord = [coord[ind][0]]
 # ticid = [ticid[ind][0]]
 
-# # >> remove completed
-# fnames = os.listdir(img_dir)
-# fnames_ccd = fnmatch.filter(fnames, '*_{}_{}_*'.format(cam, ccd))
-# ticid_ccd = [int(f.split('_')[1][3:]) for f in fnames_ccd]
-# ticid_ccd = np.array(ticid_ccd)
-# inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
-# coord = np.delete(coord, comm1, axis=0)
-# flux = np.delete(flux, comm1, axis=0)
-# ticid = np.delete(ticid, comm1) 
+# >> remove completed
+fnames_ccd = os.listdir(bls_dir)
+ticid_ccd = [int(f.split('_')[4][3:]) for f in fnames_ccd]
+ticid_ccd = np.array(ticid_ccd)
+inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
+coord = np.delete(coord, comm1, axis=0)
+flux = np.delete(flux, comm1, axis=0)
+ticid = np.delete(ticid, comm1) 
+
+# with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'w') as f:
+#     f.write(str(len(flux))+'\n')
 
 # >> compute BLS
 for i in range(len(flux)):
@@ -94,11 +105,14 @@ for i in range(len(flux)):
     if flag:
         with open(fail_txt, 'a') as f:
             f.write(str(ticid[i])+'\n')
+
+        # with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'a') as f:            
+        #     f.write('i='+str(i)+' '+str(ticid[i])+' failed \n')            
     else:
 
         # -- compute BLS ---------------------------------------------------
         _, _, _, period, bls_power_best, freqs, power, dur, epo = \
-            BLS(t,y,dy,pmin=pmin,pmax=0.25,qmin=0.005,qmax=0.05,remove=True)
+            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
 
         # pdb.set_trace()
 
@@ -116,6 +130,9 @@ for i in range(len(flux)):
                              prefix=prefix, freqs=freqs, power=power,
                              ticid=ticid[i], bins=100)
 
+        # with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'a') as f:             
+        #     f.write('i='+str(i)+' '+str(ticid[i])+' success \n')   
+        
         # prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
         #     '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
         #     '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
@@ -124,7 +141,9 @@ for i in range(len(flux)):
         #                      prefix=prefix, freqs=ls_freqs, power=ls_power,
         #                      ticid=ticid[i], bins=100, bls=False)
         
-
+# with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'a') as f:      
+#     f.write('Done!')   
+        
 # # >> diagnostic plot
 # fnames = os.listdir(img_dir)
 # period = []
