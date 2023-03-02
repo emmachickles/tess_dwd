@@ -64,6 +64,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         # bls_power = bls.eebls_gpu_fast(t, y, dy, freqs,
         #                                **search_params)
         bls_power, sols = bls.eebls_gpu(t, y, dy, freqs,
+                                        transfer_
                                        **search_params)
 
         
