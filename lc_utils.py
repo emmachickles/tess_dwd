@@ -269,7 +269,7 @@ def hr_digaram(gaia_tab, wd_cat, ticid, ax):
     wd_cat  = pd.read_csv(wd_cat, header=None, sep='\s+')
     ticid_cat = wd_cat[0].to_numpy()
     ind = np.nonzero(ticid_cat == int(ticid))[0][0]
-    mag = 
+    # mag = 
     
    
     
