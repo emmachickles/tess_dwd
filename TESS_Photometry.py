@@ -24,31 +24,10 @@ from astropy.coordinates import SkyCoord
 # from KBB_Utils.KBB_Utils import LC_Tools
 import LC_Tools
 
-wd_cat    = '/home/echickle/work/WDs.txt'
-data_dir = '/home/echickle/data/s0061/s0061/'
-out_dir = '/home/echickle/data/s0061/s0061-lc/'
-# wd_cat    = '/data/submit/echickle/WDs.txt'
-# data_dir  = '/data/submit/tess/echickle/s0061/'
-# out_dir   = '/data/submit/tess/echickle/s0061-lc/'
-# curl_file = '/data/submit/echickle/data/tesscurl_sector_41_ffic.sh'
-
-# >> light curve parameters
-N_ap  = 0.7
-N_in  = 1.5
-N_out = 2
-
-mult_output = False # >> produce multiple light curves per source
-N_ap_list   = [0.5, 0.7, 0.9, 1.1]
-N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
-
 if len(sys.argv) > 1:
     cam = sys.argv[1]
     ccd = sys.argv[2]
 
-# >> on submit
-# if len(sys.argv) >= 4:
-#     cam = sys.argv[1]
-#     ccd = sys.argv[2]
     
 def run_sector(data_dir, out_dir, wd_cat, cam=None, ccd=None, mult_output=False):
     # >> load white dwarf catalog
@@ -348,12 +327,59 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     co = np.array([ra, dec]).T
     np.save(out_dir+'co'+suffix+'.npy', co)        
 
-data_dir = '/home/echickle/data/s0060/s0060/'
-curl_file = data_dir + 'tesscurl_sector_60_ffic.sh'
+# -- downloading ---------------------------------------------------------------
+
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# data_dir = '/home/echickle/data/s0060/s0060/'
+# curl_file = data_dir + 'tesscurl_sector_60_ffic.sh'
+# cam, ccd = 1, 4
+# # download_cam(cam, curl_file, data_dir)
 # download_ccd(curl_file, data_dir, cam, ccd)
+data_dir = '/home/echickle/data/s0059/s0059/'
+curl_file = data_dir + 'tesscurl_sector_59_ffic.sh'
+cam, ccd = 1, 2
 # download_cam(cam, curl_file, data_dir)
-    
-run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
+download_ccd(curl_file, data_dir, cam, ccd)
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# download_ccd(curl_file, data_dir, cam, ccd)
+# mydir = "/data/submit/tess/echickle/"
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 4)
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 3)
+# download_ccd(mydir+"tesscurl_sector_58_ffic.sh",mydir+"s0058", 2, 3)
+# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 2, 4)
+# download_ccd(mydir+"tesscurl_sector_60_ffic.sh",mydir+"s0060", 1, 3)
+
+# -- light curve extraction ----------------------------------------------------
+
+wd_cat    = '/home/echickle/work/WDs.txt'
+data_dir = '/home/echickle/data/s0061/s0061/'
+out_dir = '/home/echickle/data/s0061/s0061-lc/'
+# wd_cat    = '/data/submit/echickle/WDs.txt'
+# data_dir  = '/data/submit/tess/echickle/s0061/'
+# out_dir   = '/data/submit/tess/echickle/s0061-lc/'
+# curl_file = '/data/submit/echickle/data/tesscurl_sector_41_ffic.sh'
+
+# >> light curve parameters
+N_ap  = 0.7
+N_in  = 1.5
+N_out = 2
+
+mult_output = False # >> produce multiple light curves per source
+N_ap_list   = [0.5, 0.7, 0.9, 1.1]
+N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
+
+
+# >> on submit
+# if len(sys.argv) >= 4:
+#     cam = sys.argv[1]
+#     ccd = sys.argv[2]
+
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# -- target run ----------------------------------------------------------------
 
 # s, cam, ccd, name, ra, dec = 56, 2, 1, "ZTF J222827.07+494916.4", 337.1127, 49.82125
 # s, cam, ccd, name, ra, dec = 56, 2, 2, "ZTF J213056.71+442046.5", 322.7362856, 44.34622882
@@ -367,11 +393,5 @@ run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
 # out_dir   = '/data/submit/tess/echickle/KBUCB-lc/'
 # run_target(data_dir, out_dir, cam, ccd, name, ra, dec)
 
-# mydir = "/data/submit/tess/echickle/"
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 4)
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 3)
-# download_ccd(mydir+"tesscurl_sector_58_ffic.sh",mydir+"s0058", 2, 3)
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 2, 4)
-# download_ccd(mydir+"tesscurl_sector_60_ffic.sh",mydir+"s0060", 1, 3)
 
 # ==============================================================================
