@@ -351,9 +351,9 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 data_dir = '/home/echickle/data/s0060/s0060/'
 curl_file = data_dir + 'tesscurl_sector_60_ffic.sh'
 # download_ccd(curl_file, data_dir, cam, ccd)
-download_cam(cam, curl_file, data_dir)
+# download_cam(cam, curl_file, data_dir)
     
-# run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
+run_sector(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output)
 
 # s, cam, ccd, name, ra, dec = 56, 2, 1, "ZTF J222827.07+494916.4", 337.1127, 49.82125
 # s, cam, ccd, name, ra, dec = 56, 2, 2, "ZTF J213056.71+442046.5", 322.7362856, 44.34622882

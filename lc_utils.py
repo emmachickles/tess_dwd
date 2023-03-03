@@ -204,12 +204,12 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
     else:
         return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
 
-def plot_phase_curve(t, y, per, out_dir, bins=200):
+def plot_phase_curve(t, y, per, out_dir, bins=200, prefix=''):
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
     folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
     shift = np.max(folded_t) - np.min(folded_t)
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(5,3))
     if type(bins) != type(None):
         ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
                        fmt='.k', ms=1, elinewidth=1)
@@ -221,8 +221,8 @@ def plot_phase_curve(t, y, per, out_dir, bins=200):
     ax.set_xlabel('Time [minutes]')
     ax.set_ylabel('Relative Flux')
     fig.tight_layout()
-    plt.savefig(out_dir+'phase_curve.png', dpi=300)
-    print('Saved '+out_dir+'phase_curve.png')
+    plt.savefig(out_dir+prefix+'phase_curve.png', dpi=300)
+    print('Saved '+out_dir+prefix+'phase_curve.png')
 
 def phase(t, freq, phi0=0.):
     phi = (t * freq - phi0)
@@ -252,9 +252,12 @@ def plot_orbital_phase_curve(ax, t, y, dy, freq, q, phi0, **kwargs):
     ax.set_xlabel('$\phi$ ($f = %.3f$)' % (freq))
     ax.set_ylabel('$y$')
 
-def hr_digaram(gaia_tab, wd_cat, ticid, ax): 
+def hr_digaram(gaia_tab, ra, dec, ax): 
     from astropy.io import fits
-
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+    from astroquery.gaia import Gaia
+    
     hdul = fits.open(gaia_tab)
     gid = hdul[1].data['source_id']
     gmag = hdul[1].data['phot_g_mean_mag']
@@ -266,36 +269,37 @@ def hr_digaram(gaia_tab, wd_cat, ticid, ax):
     ax.set_xlabel('Gaia BP-RP')
     ax.set_ylabel('Absolute Magnitude (Gaia G)')
 
-    wd_cat  = pd.read_csv(wd_cat, header=None, sep='\s+')
-    ticid_cat = wd_cat[0].to_numpy()
-    ind = np.nonzero(ticid_cat == int(ticid))[0][0]
-    mag = 
-    
-   
+    Gaia.ROW_LIMIT = 5
+    coord = SkyCoord(ra=ra, dec,
+                     unit=(u.degree, u.degree), frame='icrs')
+    j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
+    gmag_targ = j.get_results()['phot_g_mean_mag'][0]
+    bprp_targ = j.get_results()['bp_rp'][0]
+    ax.plot([bprp_targ], [gmag_targ], '^r')
     
 def make_panel_plot(t,y,freqs,power,period,prefix,gaia_tab,bins=200):
 
-    gs = fig.add_gridspec(nrows=2, ncols=2, figsize=(10,6))
-    ax1 = fig.add_subplot(gs[:, 0])
-    ax2 = fig.add_subplot(gs[0, 1])
+    gs = fig.add_gridspec(nrows=3, ncols=2, figsize=(10,10))
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[0, 1])
+    ax2 = fig.add_subplot(gs[1:, 0])
     ax3 = fig.add_subplot(gs[1, 1])
+    ax4 = fig.add_subplot(gs[2, 1])
+
+    # -- phase curves ----------------------------------------------------------
     
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
     folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
     shift = np.max(folded_t) - np.min(folded_t)
-    fig, ax = plt.subplots(figsize=(10,6))
-    if type(bins) != type(None):
-        ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
-                       fmt='.k', ms=1, elinewidth=1)
-        ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                       fmt='.k', ms=1, elinewidth=1)
-    else:
-        ax.plot(folded_t*1440, folded_y, '.k', ms=1, alpha=0.3)
-        ax.plot((folded_t+shift)*1440, folded_y, '.k', ms=1, alpha=0.3) 
-    ax.set_xlabel('Time [minutes]')
-    ax.set_ylabel('Relative Flux')
+    ax1.plot(folded_t*1440, folded_y, '.k', ms=1, alpha=0.3)
+    ax1.plot((folded_t+shift)*1440, folded_y, '.k', ms=1, alpha=0.3) 
+    ax1.set_xlabel('Time [minutes]')
+    ax1.set_ylabel('Relative Flux')
+
+    # -- bls spectra -----------------------------------------------------------
+    
     fig.tight_layout()
-    plt.savefig(out_dir+'phase_curve.png', dpi=300)
-    print('Saved '+out_dir+'phase_curve.png')
+    plt.savefig(out_dir+prefix+'plot.png', dpi=300)
+    print('Saved '+out_dir+prefix+'plot.png')
     plt.close()
