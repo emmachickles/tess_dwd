@@ -126,6 +126,8 @@ for i in range(len(flux)):
             '_dur_'+str(dur)+'_epo_'+str(epo)+\
             '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
 
+        pdb.set_trace()
+        
         lcu.make_phase_curve(t, y, period, dy=dy, output_dir=bls_dir,
                              prefix=prefix, freqs=freqs, power=power,
                              ticid=ticid[i], bins=100)
