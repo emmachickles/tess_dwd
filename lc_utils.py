@@ -276,6 +276,10 @@ def hr_digaram(gaia_tab, ra, dec, ax):
     gmag_targ = j.get_results()['phot_g_mean_mag'][0]
     bprp_targ = j.get_results()['bp_rp'][0]
     ax.plot([bprp_targ], [gmag_targ], '^r')
+    wd_cat  = pd.read_csv(wd_cat, header=None, sep='\s+')
+    ticid_cat = wd_cat[0].to_numpy()
+    ind = np.nonzero(ticid_cat == int(ticid))[0][0]
+    # mag = 
     
 def make_panel_plot(t,y,freqs,power,period,prefix,gaia_tab,bins=200):
 
