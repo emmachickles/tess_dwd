@@ -270,7 +270,7 @@ def hr_digaram(gaia_tab, ra, dec, ax):
     ax.set_ylabel('Absolute Magnitude (Gaia G)')
 
     Gaia.ROW_LIMIT = 5
-    coord = SkyCoord(ra=ra, dec,
+    coord = SkyCoord(ra=ra, dec=dec,
                      unit=(u.degree, u.degree), frame='icrs')
     j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
     gmag_targ = j.get_results()['phot_g_mean_mag'][0]
