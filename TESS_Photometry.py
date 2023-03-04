@@ -343,11 +343,9 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 # download_ccd(curl_file, data_dir, cam, ccd)
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-data_dir = '/home/echickle/data/s0059/s0059/'
-curl_file = data_dir + 'tesscurl_sector_59_ffic.sh'
+data_dir = '/home/echickle/data/s0058/s0058/'
+curl_file = data_dir + 'tesscurl_sector_58_ffic.sh'
 cam, ccd = 1, 1
-
-
 # download_cam(cam, curl_file, data_dir)
 download_ccd(curl_file, data_dir, cam, ccd)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -374,8 +372,8 @@ download_ccd(curl_file, data_dir, cam, ccd)
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # wd_cat    = '/home/echickle/work/WDs.txt'
-# data_dir = '/home/echickle/data/s0060/s0060/'
-# out_dir = '/home/echickle/data/s0060/s0060-lc/'
+# data_dir = '/home/echickle/data/s0059/s0059/'
+# out_dir = '/home/echickle/data/s0059/s0059-lc/'
 
 # # >> light curve parameters
 # N_ap  = 0.7
@@ -386,7 +384,7 @@ download_ccd(curl_file, data_dir, cam, ccd)
 # N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 # N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-# cam, ccd = 1, 4
+# cam, ccd = 1, 2
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
 #                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

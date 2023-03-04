@@ -9,17 +9,19 @@ def extract_lc():
     wd_cat  = pd.read_csv('/home/echickle/work/tess_dwd/WDs.txt', header=None, sep='\s+')
 
 def atlas_lc(f):
-    data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)
-    coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
-    RA=np.mean(coords[:,0])
-    Dec=np.mean(coords[:,1])
+    data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)    
+    # data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)
+    # coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
+    # RA=np.mean(coords[:,0])
+    # Dec=np.mean(coords[:,1])
 
     # >> filter by limiting magnitude
     fil=np.loadtxt(f,usecols=(5),skiprows=0,dtype=str)
     fil=fil[data[:,3]>17.5]
     data=data[data[:,3]>17.5]
 
-    return data, RA, Dec
+    # return data, RA, Dec
+    return data
 
 def load_hipercam(logfile):
     '''Loads logfile produced by HiPERCAM reduce pipeline. 
@@ -252,7 +254,9 @@ def plot_orbital_phase_curve(ax, t, y, dy, freq, q, phi0, **kwargs):
     ax.set_xlabel('$\phi$ ($f = %.3f$)' % (freq))
     ax.set_ylabel('$y$')
 
-def hr_digaram(gaia_tab, ra, dec, ax): 
+def hr_digaram(gaia_tab, ra, dec, ax):
+
+    
     from astropy.io import fits
     import astropy.units as u
     from astropy.coordinates import SkyCoord
@@ -276,34 +280,118 @@ def hr_digaram(gaia_tab, ra, dec, ax):
     gmag_targ = j.get_results()['phot_g_mean_mag'][0]
     bprp_targ = j.get_results()['bp_rp'][0]
     ax.plot([bprp_targ], [gmag_targ], '^r')
-    wd_cat  = pd.read_csv(wd_cat, header=None, sep='\s+')
-    ticid_cat = wd_cat[0].to_numpy()
-    ind = np.nonzero(ticid_cat == int(ticid))[0][0]
-    # mag = 
-    
-def make_panel_plot(t,y,freqs,power,period,prefix,gaia_tab,bins=200):
 
-    gs = fig.add_gridspec(nrows=3, ncols=2, figsize=(10,10))
-    ax0 = fig.add_subplot(gs[0, 0])
-    ax1 = fig.add_subplot(gs[0, 1])
-    ax2 = fig.add_subplot(gs[1:, 0])
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax4 = fig.add_subplot(gs[2, 1])
+def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200,n_std=3,wind=0.1, pmax=0.15, qmin=0.01, qmax=0.05):
 
-    # -- phase curves ----------------------------------------------------------
+    import pandas as pd
+    import os
+    # fname example: pow_74.484985_per_162.49363_TIC0000000036085812_cam_1_ccd_1_dur_0.05_epo_0.6333333_ra_118.2292373099_dec_-6.24747586719_phase_curve.png
+
+    ticid = int(fname.split('_')[4][3:])
+    cam = fname.split('_')[6]
+    ccd = fname.split('_')[8]
+    per = float(fname.split('_')[3]) / 1440
+    ra = float(fname.split('_')[14])
+    dec = float(fname.split('_')[16])    
+    prefix = '_'.join(fname.split('_')[:-2])
+
+
     
-    inds = np.nonzero(~np.isnan(y))
-    t, y = t[inds], y[inds]
-    folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
+    fig = plt.figure(figsize=(10,6), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=2, ncols=2)
+    ax0 = fig.add_subplot(gs[0, 1])
+    ax1 = fig.add_subplot(gs[1, 1])
+    ax2 = fig.add_subplot(gs[:, 0])
+
+    # -- tess phase curve ------------------------------------------------------
+
+    suffix = '-{}-{}.npy'.format(cam, ccd)
+    t = np.load(tess_dir+'ts'+suffix)
+    ticid_list = np.load(tess_dir+'id'+suffix)
+    ind = np.nonzero(ticid_list == ticid)[0][0]
+    y = np.load(tess_dir+'lc'+suffix)[ind]
+    
+    t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
+    dy = np.ones(y.shape)    
+    folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
     shift = np.max(folded_t) - np.min(folded_t)
-    ax1.plot(folded_t*1440, folded_y, '.k', ms=1, alpha=0.3)
-    ax1.plot((folded_t+shift)*1440, folded_y, '.k', ms=1, alpha=0.3) 
-    ax1.set_xlabel('Time [minutes]')
-    ax1.set_ylabel('Relative Flux')
 
-    # -- bls spectra -----------------------------------------------------------
+    ax0.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                   fmt='.k', ms=1, elinewidth=1)
+    ax0.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                   fmt='.k', ms=1, elinewidth=1)    
+    ax0.set_xlabel('Time [minutes]')
+    ax0.set_ylabel('TESS Relative Flux')
+
+    # -- atlas phase curve ------------------------------------------------------
+
+    
+    # >> load white dwarf catalog
+    wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+')
+    ind = np.nonzero(wd_cat[0].to_numpy() == ticid)[0][0]
+    gid = int(wd_cat.iloc[ind][3])
+    if os.path.exists(atlas_dir+str(gid)):
+        data = atlas_lc(atlas_dir+str(gid))
+        t, y, dy = data[:,0], data[:,1], data[:,2]
+        t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
+        folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+        shift = np.max(folded_t) - np.min(folded_t)
+        ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                       fmt='.k', ms=1, elinewidth=1)
+        ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                       fmt='.k', ms=1, elinewidth=1)         
+        ax1.set_xlabel('Time [minutes]')
+        ax1.set_ylabel('ATLAS Relative Flux')
+
+    # -- ztf phase curve ------------------------------------------------------
+
+    if not os.path.exists(atlas_dir+str(gid)) and if dec >= -28:
+        os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} g'.format(ra, dec))
+        if os.path.exists('/home/echickle/{}_{}_g.lc'.format(ra,dec)):
+            os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} i'.format(ra, dec))
+            os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} r'.format(ra, dec))
+            data = np.loadtxt('/home/echickle/{}_{}_g.lc'.format(ra,dec))
+            t, y, dy = data[:,0], data[:,1], data[:,2]
+            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
+            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+            shift = np.max(folded_t) - np.min(folded_t)
+            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.g', ms=1, elinewidth=1)
+            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.g', ms=1, elinewidth=1)
+
+            data = np.loadtxt('/home/echickle/{}_{}_r.lc'.format(ra,dec))
+            t, y, dy = data[:,0], data[:,1], data[:,2]
+            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
+            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+            shift = np.max(folded_t) - np.min(folded_t)
+            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.r', ms=1, elinewidth=1)
+            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.r', ms=1, elinewidth=1)
+
+            data = np.loadtxt('/home/echickle/{}_{}_k.lc'.format(ra,dec))
+            t, y, dy = data[:,0], data[:,1], data[:,2]
+            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
+            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+            shift = np.max(folded_t) - np.min(folded_t)
+            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.k', ms=1, elinewidth=1)
+            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+                           fmt='.k', ms=1, elinewidth=1)            
+            
+            ax1.set_xlabel('Time [minutes]')
+            ax1.set_ylabel('ZTF Relative Flux')
+            
+
+    # -- hr diagram ------------------------------------------------------------
+
+    hr_digaram(gaia_tab, ra, dec, ax2)
     
     fig.tight_layout()
-    plt.savefig(out_dir+prefix+'plot.png', dpi=300)
-    print('Saved '+out_dir+prefix+'plot.png')
+    plt.savefig(out_dir+prefix+'_panel.png', dpi=300)
+    print('Saved '+out_dir+prefix+'_panel.png')
     plt.close()
+
+
+    
