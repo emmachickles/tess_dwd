@@ -39,31 +39,40 @@ def load_hipercam(logfile):
 
     return
 
-def bin_timeseries(t, y, dy, bins):
+def bin_timeseries(t, y, bins, dy=None):
     trunc = len(y) // bins * bins
     t_binned = np.split(t[:trunc], bins)
     y_binned = np.split(y[:trunc], bins)
-    dy_binned = np.split(dy[:trunc], bins)
+    if type(dy) != type(None):
+        dy_binned = np.split(dy[:trunc], bins)
 
     if trunc < len(y):
         y_binned[-1] = np.append(y_binned[-1], y[trunc:])
         t_binned[-1] = np.append(t_binned[-1], t[trunc:])
-        dy_binned[-1] = np.append(dy_binned[-1], dy[trunc:])
+        if type(dy) != type(None):
+            dy_binned[-1] = np.append(dy_binned[-1], dy[trunc:])
 
+    if type(dy) == type(None):
+        dy_binned = []
     for i in range(bins):
         t_binned[i] = np.average(t_binned[i])
 
         # dy_binned[i] = 1 / np.sqrt(np.sum(dy_binned[i]))
-        err = np.std(y_binned[i])
+        npts = len(y_binned[i])
         
-        y_binned[i] = np.average(y_binned[i], weights=dy_binned[i])
-        dy_binned[i] = err
+        if type(dy) == type(None):
+            y_binned[i] = np.average(y_binned[i])
+            err = np.std(y_binned[i]) / np.sqrt(npts)
+            dy_binned.append(err)
+        else:
+            y_binned[i] = np.average(y_binned[i], weights=dy_binned[i])
+            dy_binned[i] = np.average(dy_binned[i]/np.sqrt(npts))    
 
     return t_binned, y_binned, dy_binned
 
 
 def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
-            ccd=None, coord=None, output_dir=None):
+            ccd=None, coord=None, output_dir=None, dy=None):
     from wotan import flatten
 
     # if diag:
@@ -77,15 +86,22 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
     # >> remove nans
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
+    return_dy=False
+    if type(dy) != type(None):
+        return_dy=True
+        dy = dy[inds]
 
     # >> sigma-clip         
     med = np.median(y)
     std = np.std(y)
     inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
     t, y = t[inds], y[inds]
+    if return_dy:
+        dy = dy[inds]    
 
     if diag:
-        dy = np.ones(y.shape)        
+        if not return_dy:
+            dy = np.ones(y.shape)        
         t, y, dy, period, bls_power_best, freqs, power, dur, epo = \
             BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=True)
         prefix = 'TIC%016d'%ticid+'_0_cam_'+str(cam)+'_ccd_'+str(ccd)+\
@@ -100,16 +116,23 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
     # >> normalize        
     if np.median(y) < 0:
         y = y / np.abs(med) + 2.
+        if return_dy:
+            dy = dy/np.abs(med) + 2.
     else:
         y = y / med
+        if return_dy:
+            dy = dy/med
     
     # >> detrending 
     y = flatten(t, y, window_length=wind, method='biweight')
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
+    if return_dy:
+        dy = dy[inds]
 
     if diag:
-        dy = np.ones(y.shape)                
+        if not return_dy:
+            dy = np.ones(y.shape)                
         t, y, dy, period, bls_power_best, freqs, power, dur, epo = \
             BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=True)
         prefix = 'TIC%016d'%ticid+'_1_cam_'+str(cam)+'_ccd_'+str(ccd)+\
@@ -128,12 +151,13 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
     #     make_phase_curve(t, y, 49.71/1440, dy=np.ones(y.shape)*0.1,
     #                      output_dir='/home/submit/echickle/foo/',
     #                      prefix='nstd'+str(n_std)+'-wind'+str(wind)+'-2-')
-        
+    if return_dy:
+        return t, y, dy, flag
     return t, y, flag
     
 
 def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=None, power=None, ticid=None,
-                     bins=200, t0=None, bls=True):
+                     bins=None, t0=None, bls=True):
     '''TODO:
     * bin phase curve
     * change x axis to orbital phase
@@ -146,18 +170,25 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
     med = np.median(y)
     if np.median(y) < 0:
         y = y / np.abs(med) + 2.
+        if type(dy) != type(None):
+            dy = dy / np.abs(med) + 2.
     else:
         y = y/med    
-    
-    if type(dy) == type(None):
-        dy = np.ones(y.shape)
+        if type(dy) != type(None):
+            dy = dy / med    
 
     # >> fold
     t = t % period 
     inds = np.argsort(t)
-    folded_t, folded_y, folded_dy = t[inds], y[inds], dy[inds]
-        
-    folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, folded_dy, bins)
+    folded_t, folded_y = t[inds], y[inds]
+    if type(dy) != type(None):
+        folded_dy = dy[inds]
+    else:
+        folded_dy = None
+
+    if type(bins) != type(None):
+        folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, bins, dy=folded_dy)
+
     if output_dir:
         if type(freqs) == type(None):
             _,_,_, _, bls_power_best, freqs, power, dur, epo = \
@@ -186,10 +217,10 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
             
         folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
         shift = np.max(folded_t) - np.min(folded_t)        
-        if bins:
-            ax[2].errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+        if type(bins) != type(None):
+            ax[2].errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
-            ax[2].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+            ax[2].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
 
         else:
@@ -213,9 +244,9 @@ def plot_phase_curve(t, y, per, out_dir, bins=200, prefix=''):
     shift = np.max(folded_t) - np.min(folded_t)
     fig, ax = plt.subplots(figsize=(5,3))
     if type(bins) != type(None):
-        ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+        ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                        fmt='.k', ms=1, elinewidth=1)
-        ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
+        ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
                        fmt='.k', ms=1, elinewidth=1)
     else:
         ax.plot(folded_t*1440, folded_y, '.k', ms=1, alpha=0.3)
@@ -281,10 +312,11 @@ def hr_digaram(gaia_tab, ra, dec, ax):
     bprp_targ = j.get_results()['bp_rp'][0]
     ax.plot([bprp_targ], [gmag_targ], '^r')
 
-def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200,n_std=3,wind=0.1, pmax=0.15, qmin=0.01, qmax=0.05):
+def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200,n_std=3,wind=0.1,pmin=400/60,pmax=0.15,qmin=0.01,qmax=0.05):
 
     import pandas as pd
     import os
+    from Period_Finding import BLS
     # fname example: pow_74.484985_per_162.49363_TIC0000000036085812_cam_1_ccd_1_dur_0.05_epo_0.6333333_ra_118.2292373099_dec_-6.24747586719_phase_curve.png
 
     ticid = int(fname.split('_')[4][3:])
@@ -293,15 +325,16 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     per = float(fname.split('_')[3]) / 1440
     ra = float(fname.split('_')[14])
     dec = float(fname.split('_')[16])    
-    prefix = '_'.join(fname.split('_')[:-2])
-
+    # prefix = '_'.join(fname.split('_')[:-2])
+    prefix = '_'.join(fname.split('_')[:17])
 
     
     fig = plt.figure(figsize=(10,6), constrained_layout=True)
-    gs = fig.add_gridspec(nrows=2, ncols=2)
+    gs = fig.add_gridspec(nrows=3, ncols=2)
     ax0 = fig.add_subplot(gs[0, 1])
     ax1 = fig.add_subplot(gs[1, 1])
-    ax2 = fig.add_subplot(gs[:, 0])
+    ax2 = fig.add_subplot(gs[2, 1])    
+    ax3 = fig.add_subplot(gs[:, 0])
 
     # -- tess phase curve ------------------------------------------------------
 
@@ -312,14 +345,15 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     y = np.load(tess_dir+'lc'+suffix)[ind]
     
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
-    dy = np.ones(y.shape)    
-    folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+    folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
     shift = np.max(folded_t) - np.min(folded_t)
 
-    ax0.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+    ax0.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                    fmt='.k', ms=1, elinewidth=1)
-    ax0.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                   fmt='.k', ms=1, elinewidth=1)    
+    ax0.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+                   fmt='.k', ms=1, elinewidth=1)
+    ax0.text(0.95, 0.05, str(np.round(per*1440,5))+' min', horizontalalignment='right',
+             transform=ax0.transAxes)                    
     ax0.set_xlabel('Time [minutes]')
     ax0.set_ylabel('TESS Relative Flux')
 
@@ -333,60 +367,76 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     if os.path.exists(atlas_dir+str(gid)):
         data = atlas_lc(atlas_dir+str(gid))
         t, y, dy = data[:,0], data[:,1], data[:,2]
-        t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
-        folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
+        t, y, dy, flag = prep_lc(t, y, n_std=n_std, wind=wind, dy=dy)
+
+        _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        prefix1 = 'ATLAS_'+prefix+'_'
+        make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
+                         prefix=prefix1, freqs=freqs, power=power,
+                         ticid=ticid, bins=100)
+        
+        folded_t, folded_y, folded_dy = make_phase_curve(t, y, period, bins=bins, dy=dy)
         shift = np.max(folded_t) - np.min(folded_t)
-        ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
+        ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                        fmt='.k', ms=1, elinewidth=1)
-        ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                       fmt='.k', ms=1, elinewidth=1)         
-        ax1.set_xlabel('Time [minutes]')
-        ax1.set_ylabel('ATLAS Relative Flux')
+        ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+                       fmt='.k', ms=1, elinewidth=1)
+        ax1.text(0.95, 0.05, str(np.round(period*1440,5))+' min', horizontalalignment='right',
+                 transform=ax1.transAxes)                
+    ax1.set_xlabel('Time [minutes]')
+    ax1.set_ylabel('ATLAS Relative Flux')
 
     # -- ztf phase curve ------------------------------------------------------
 
-    if not os.path.exists(atlas_dir+str(gid)) and if dec >= -28:
-        os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} g'.format(ra, dec))
-        if os.path.exists('/home/echickle/{}_{}_g.lc'.format(ra,dec)):
-            os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} i'.format(ra, dec))
-            os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} r'.format(ra, dec))
-            data = np.loadtxt('/home/echickle/{}_{}_g.lc'.format(ra,dec))
-            t, y, dy = data[:,0], data[:,1], data[:,2]
-            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
-            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
-            shift = np.max(folded_t) - np.min(folded_t)
-            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.g', ms=1, elinewidth=1)
-            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.g', ms=1, elinewidth=1)
+    t, y, dy = [], [], []
+    os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} g'.format(ra, dec))
+    if os.path.exists('/home/echickle/{}_{}_g.lc'.format(ra,dec)):
+        data = np.loadtxt('/home/echickle/{}_{}_g.lc'.format(ra,dec))
+        med = np.median(data[:,1])
+        t.extend(data[:,0])
+        y.extend(data[:,1] - np.median(data[:,1]))
+        dy.extend(data[:,2])
+    os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} r'.format(ra, dec))
+    if os.path.exists('/home/echickle/{}_{}_r.lc'.format(ra,dec)):    
+        data  = np.loadtxt('/home/echickle/{}_{}_r.lc'.format(ra,dec))
+        med = np.median(data[:,1])        
+        t.extend(data[:,0])
+        y.extend(data[:,1] - np.median(data[:,1]))
+        dy.extend(data[:,2])
+    os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} i'.format(ra, dec))
+    if os.path.exists('/home/echickle/{}_{}_i.lc'.format(ra,dec)): 
+        data = np.loadtxt('/home/echickle/{}_{}_i.lc'.format(ra,dec))
+        med = np.median(data[:,1])        
+        t.extend(data[:,0])
+        y.extend(data[:,1] - np.median(data[:,1]))
+        dy.extend(data[:,2])
+        
+    if len(t) != 0:
+        t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
+        _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        prefix1 = 'ZTF_'+prefix+'_'
+        make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
+                         prefix=prefix1, freqs=freqs, power=power,
+                         ticid=ticid)
+        folded_t, folded_y, folded_dy = make_phase_curve(t, y, period, dy=dy)
+        shift = np.max(folded_t) - np.min(folded_t)
+        ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
+                       fmt='.k', ms=1, elinewidth=1)
+        ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+                       fmt='.k', ms=1, elinewidth=1)
 
-            data = np.loadtxt('/home/echickle/{}_{}_r.lc'.format(ra,dec))
-            t, y, dy = data[:,0], data[:,1], data[:,2]
-            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
-            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
-            shift = np.max(folded_t) - np.min(folded_t)
-            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.r', ms=1, elinewidth=1)
-            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.r', ms=1, elinewidth=1)
+        ax2.text(0.95, 0.05, str(np.round(period*1440,5))+' min', horizontalalignment='right',
+                 transform=ax2.transAxes)        
+    ax2.set_xlabel('Time [minutes]')
+    ax2.set_ylabel('ZTF Relative Flux')
 
-            data = np.loadtxt('/home/echickle/{}_{}_k.lc'.format(ra,dec))
-            t, y, dy = data[:,0], data[:,1], data[:,2]
-            t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)        
-            folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins, dy=dy)
-            shift = np.max(folded_t) - np.min(folded_t)
-            ax1.errorbar(folded_t*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.k', ms=1, elinewidth=1)
-            ax1.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy*0.1,
-                           fmt='.k', ms=1, elinewidth=1)            
-            
-            ax1.set_xlabel('Time [minutes]')
-            ax1.set_ylabel('ZTF Relative Flux')
             
 
     # -- hr diagram ------------------------------------------------------------
 
-    hr_digaram(gaia_tab, ra, dec, ax2)
+    hr_digaram(gaia_tab, ra, dec, ax3)
     
     fig.tight_layout()
     plt.savefig(out_dir+prefix+'_panel.png', dpi=300)

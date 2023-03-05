@@ -1,7 +1,9 @@
 import lc_utils as lcu
 import sys
-# fname = "pow_8.54768_per_14.46421_TIC0000000751298830_cam_1_ccd_1_dur_0.01_epo_0.9266666_ra_115.53650119612_dec_-7.56906251186_phase_curve.png"
 
+
+fname = "pow_72.52995_per_74.44577_TIC0000000803616096_cam_1_ccd_3_dur_0.01_epo_0.72999996_ra_131.26583606681_dec_-1.42705212618_phase_curve"
+# fname = "pow_66.43712_per_25.71457_TIC0000000804368061_cam_1_ccd_3_dur_0.01_epo_0.39666665_ra_138.5436398888_dec_-1.21204428418_phase_curve"
 # fname = sys.argv[1]
 sector = 61
 
