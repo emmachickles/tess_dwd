@@ -23,12 +23,14 @@ import sys
 cam = sys.argv[1]
 ccd = sys.argv[2]
 
-output_dir = '/data/submit/tess/echickle/'
-data_dir   = '/data/submit/echickle/s0061-lc/'
+sector = 57
 
-bls_dir    = output_dir + 's0061-bls-{}-{}-230302/'.format(cam,ccd)
-ls_dir     = output_dir + 's0061-ls-{}-{}-230302/'.format(cam,ccd)
-diag_dir    = output_dir + 's0061-diag-{}-{}-230302/'.format(cam,ccd)
+output_dir = '/data/submit/tess/echickle/'
+data_dir   = '/data/submit/echickle/s00{}-lc/'.format(sector)
+
+bls_dir    = output_dir + 's00{}-bls-{}-{}-230303/'.format(sector,cam,ccd)
+ls_dir     = output_dir + 's00{}-ls-{}-{}-230303/'.format(sector, cam,ccd)
+diag_dir    = output_dir + 's00{}-diag-{}-{}-230303/'.format(sector, cam,ccd)
 
 # ------------------------------------------------------------------------------
 
@@ -43,7 +45,7 @@ import gc
 import fnmatch
 sys.path.insert(0, "/home/submit/echickle/work/")
 
-from Period_Finding import BLS, LS_Full
+from Period_Finding import BLS, LS_Full, LS_Astropy
 # from KBB_Utils.KBB_Utils.Period_Finding import BLS, LS_Full
 
 from astropy.io import fits
@@ -58,7 +60,7 @@ import gc
 
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(ls_dir, exist_ok=True)
-os.makedirs(diag_dir, exist_ok=True)
+# os.makedirs(diag_dir, exist_ok=True)
 
 fail_txt = output_dir + 'cam'+str(cam)+'-ccd'+str(ccd)+'-failed.txt'
 with open(fail_txt, 'w') as f:
@@ -118,8 +120,8 @@ for i in range(len(flux)):
 
         # # -- compute LS --------------------------------------------------
         # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = LS_Full(t,y,dy,pmin=pmin,
-        #                                                        pmax=0.25)
-
+        #                                                                 pmax=0.13)
+        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = LS_Astropy(t,y,dy,pmax=pmax)
         # -- plot phase curve ----------------------------------------------
         prefix = 'pow_'+str(bls_power_best)+'_per_'+str(round(period*1440,5))+\
             '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
@@ -134,14 +136,14 @@ for i in range(len(flux)):
         # with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'a') as f:             
         #     f.write('i='+str(i)+' '+str(ticid[i])+' success \n')   
         
-        # prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
-        #     '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
-        #     '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
+        prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
+            '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
+            '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
 
-        # lcu.make_phase_curve(t, y, ls_period, dy=dy, output_dir=ls_dir,
-        #                      prefix=prefix, freqs=ls_freqs, power=ls_power,
-        #                      ticid=ticid[i], bins=100, bls=False)
-        
+        lcu.make_phase_curve(t, y, ls_period, dy=dy, output_dir=ls_dir,
+                             prefix=prefix, freqs=ls_freqs, power=ls_power,
+                             ticid=ticid[i], bins=100, bls=False)
+
 # with open('/home/submit/echickle/out_cam{}_ccd{}.txt'.format(cam, ccd), 'a') as f:      
 #     f.write('Done!')   
         

@@ -121,15 +121,16 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
                 # freqs_to_remove.append([86400/400 - 0.1, 86400/400 + 0.1])
                 # freqs_to_remove.append([86400/600 - 0.07, 86400/600 + 0.07])
                 # freqs_to_remove.append([86400/800 - 0.03, 86400/800 + 0.03])
- 
-                freqs_to_remove.append([86400/(200*2) - 1.2, 86400/(200*2) + 1.2])
-                freqs_to_remove.append([86400/500 - 1, 86400/500 + 1])                
-                freqs_to_remove.append([86400/(200*3) - 0.1, 86400/(200*3) + 0.1])
-                freqs_to_remove.append([86400/600 - 1, 86400/600 + 1])    
-                freqs_to_remove.append([86400/(200*4) - 0.1, 86400/(200*4) + 0.1])
-                freqs_to_remove.append([86400/(200*5) - 3, 86400/(200*5) + 3])     
-                freqs_to_remove.append([86400/(200*6) - 3, 86400/(200*6) + 3]) 
-                freqs_to_remove.append([86400/(200*7) - 2, 86400/(200*7) + 2])               
+
+                df = 0.1
+                freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
+                freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
+                freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
+                freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
+                freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
+                freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
+                freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
+                freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
                 # for i in [2,3,4]:
                 #         centr = 86400 / (200*i)
                 #         freqs_to_remove.append([centr - 0.05, centr + 0.05])
@@ -258,7 +259,44 @@ def LS(t,y,dy,pmin=2,remove=False):
         period=1.0/freqs[np.argmax(ls_power)]
 
         return t, y, dy, period, significance
+
+def LS_Astropy(t,y,dy, remove=True,pmax=0.25):
+        from astropy.timeseries import LombScargle
+        t=t-np.mean(t)
+        # lightcurves=[(t,y,dy)]
+        # proc = gls.LombScargleAsyncProcess()
+        # freqs=np.linspace(1/0.25,86400/400,100000) 
+        # result = proc.run([(t, y, dy)], freqs=freqs)
+        # proc.finish()
+        # freqs, ls_power = result[0]
+        freqs, ls_power = LombScargle(t,y).autopower()
         
+        if remove:
+                freqs_to_remove = []
+                df = 0.1
+                freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
+                freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
+                freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
+                freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
+                freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
+                freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
+                freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
+                freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+                for pair in freqs_to_remove:
+                        idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
+                        freqs = freqs[idx]
+                        ls_power = ls_power[idx]
+                idx = np.where(freqs < 86400/400)[0]
+                freqs = freqs[idx]
+                ls_power = ls_power[idx]
+                idx = np.where(freqs > 1/pmax)[0]
+                freqs = freqs[idx]
+                ls_power = ls_power[idx]                                        
+        best_freq=freqs[np.argmax(ls_power)]
+        significance=(np.max(ls_power)-np.mean(ls_power))/np.std(ls_power)      
+        period=1.0/freqs[np.argmax(ls_power)]
+        return t, y, dy, period, significance, freqs, ls_power        
+
 def LS_Full(t,y,dy,pmin=2,pmax=True,oversample_factor=3.0,trim=False):
         t=t-np.mean(t)
         lightcurves=[(t,y,dy)]
@@ -276,6 +314,7 @@ def LS_Full(t,y,dy,pmin=2,pmax=True,oversample_factor=3.0,trim=False):
 
         proc = gls.LombScargleAsyncProcess(use_double=True)
         result = proc.run([(t, y, dy)],freqs=freqs,use_fft=True)
+        
         proc.finish()
         freqs, ls_power = result[0]
         #freqs_to_remove = [[3e-2,4e-2], [49.99,50.01], [48.99,49.01], [47.99,48.01], [46.99,47.01], [45.99,46.01], [3.95,4.05], [2.95,3.05], [1.95,2.05], [0.95,1.05], [0.48, 0.52], [0.32, 0.34], [0.24, 0.26], [0.19, 0.21]]
