@@ -343,11 +343,11 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 # download_ccd(curl_file, data_dir, cam, ccd)
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# data_dir = '/home/echickle/data/s0058/s0058/'
-# curl_file = data_dir + 'tesscurl_sector_58_ffic.sh'
-# cam, ccd = 1, 4
-# # download_cam(cam, curl_file, data_dir)
-# download_ccd(curl_file, data_dir, cam, ccd)
+data_dir = '/home/echickle/data/s0056/s0056/'
+curl_file = data_dir + 'tesscurl_sector_56_ffic.sh'
+cam, ccd = 2, 4
+# download_cam(cam, curl_file, data_dir)
+download_ccd(curl_file, data_dir, cam, ccd)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # download_ccd(curl_file, data_dir, cam, ccd)
@@ -371,22 +371,22 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 #     ccd = sys.argv[2]
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-wd_cat    = '/home/echickle/work/WDs.txt'
-data_dir = '/home/echickle/data/s0058/s0058/'
-out_dir = '/home/echickle/data/s0058/s0058-lc/'
+# wd_cat    = '/home/echickle/work/WDs.txt'
+# data_dir = '/home/echickle/data/s0056/s0056/'
+# out_dir = '/home/echickle/data/s0056/s0056-lc/'
 
-# >> light curve parameters
-N_ap  = 0.7
-N_in  = 1.5
-N_out = 2
-mult_output = False # >> produce multiple light curves per source
-tica = False
-N_ap_list   = [0.5, 0.7, 0.9, 1.1]
-N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
+# # >> light curve parameters
+# N_ap  = 0.7
+# N_in  = 1.5
+# N_out = 2
+# mult_output = False # >> produce multiple light curves per source
+# tica = False
+# N_ap_list   = [0.5, 0.7, 0.9, 1.1]
+# N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 1, 1
-run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
-                  tica=tica)
+# cam, ccd = 1, 4
+# run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
+#                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # -- target run ----------------------------------------------------------------

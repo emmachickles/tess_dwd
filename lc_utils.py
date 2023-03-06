@@ -61,8 +61,8 @@ def bin_timeseries(t, y, bins, dy=None):
         npts = len(y_binned[i])
         
         if type(dy) == type(None):
+            err = np.std(y_binned[i]) / np.sqrt(npts)            
             y_binned[i] = np.average(y_binned[i])
-            err = np.std(y_binned[i]) / np.sqrt(npts)
             dy_binned.append(err)
         else:
             y_binned[i] = np.average(y_binned[i], weights=dy_binned[i])
@@ -188,7 +188,7 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
 
     if type(bins) != type(None):
         folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, bins, dy=folded_dy)
-
+    
     if output_dir:
         if type(freqs) == type(None):
             _,_,_, _, bls_power_best, freqs, power, dur, epo = \
@@ -391,21 +391,24 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
 
     t, y, dy = [], [], []
     os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} g'.format(ra, dec))
-    if os.path.exists('/home/echickle/{}_{}_g.lc'.format(ra,dec)):
+    if os.path.exists('/home/echickle/{}_{}_g.lc'.format(ra,dec)) and \
+       os.path.getsize('/home/echickle/{}_{}_g.lc'.format(ra,dec)) != 0:
         data = np.loadtxt('/home/echickle/{}_{}_g.lc'.format(ra,dec))
         med = np.median(data[:,1])
         t.extend(data[:,0])
         y.extend(data[:,1] - np.median(data[:,1]))
         dy.extend(data[:,2])
     os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} r'.format(ra, dec))
-    if os.path.exists('/home/echickle/{}_{}_r.lc'.format(ra,dec)):    
+    if os.path.exists('/home/echickle/{}_{}_r.lc'.format(ra,dec)) and \
+       os.path.getsize('/home/echickle/{}_{}_r.lc'.format(ra,dec)) != 0:    
         data  = np.loadtxt('/home/echickle/{}_{}_r.lc'.format(ra,dec))
         med = np.median(data[:,1])        
         t.extend(data[:,0])
         y.extend(data[:,1] - np.median(data[:,1]))
         dy.extend(data[:,2])
     os.system('python /data/ZTF_Lightcurves/get_LC.py {} {} i'.format(ra, dec))
-    if os.path.exists('/home/echickle/{}_{}_i.lc'.format(ra,dec)): 
+    if os.path.exists('/home/echickle/{}_{}_i.lc'.format(ra,dec)) and \
+       os.path.getsize('/home/echickle/{}_{}_i.lc'.format(ra,dec)) != 0: 
         data = np.loadtxt('/home/echickle/{}_{}_i.lc'.format(ra,dec))
         med = np.median(data[:,1])        
         t.extend(data[:,0])

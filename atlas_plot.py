@@ -1,16 +1,18 @@
 import lc_utils as lcu
 import sys
 
+fnames = ['pow_38.769726_per_173.86668_TIC0000000783345171_cam_2_ccd_4_dur_0.05_epo_0.73333335_ra_113.96540519704_dec_-20.22729611559_phase_curve.png', 'pow_45.408226_per_200.00174_TIC0000000777531790_cam_2_ccd_1_dur_0.01_epo_0.75_ra_110.09496827942_dec_-30.71772877778_phase_curve.png', 'pow_30.43446_per_17.5001_TIC0000000783452510_cam_2_ccd_4_dur_0.01_epo_0.96999997_ra_113.96144752326_dec_-18.85403098548_phase_curve.png', 'pow_9.029086_per_9.04039_TIC0000000781318722_cam_2_ccd_1_dur_0.014925373_epo_0.63184077_ra_108.50475688348_dec_-23.14869876116_phase_curve.png', 'pow_29.635817_per_99.99271_TIC0000000749272373_cam_2_ccd_4_dur_0.01_epo_0.093333334_ra_114.29985959115_dec_-13.87892025647_phase_curve.png', 'pow_8.943269_per_7.81511_TIC0000000825824442_cam_2_ccd_1_dur_0.014925373_epo_0.13432835_ra_120.39238453504_dec_-27.53875191248_phase_curve.png', 'pow_71.99709_per_196.66104_TIC0000000774042924_cam_2_ccd_1_dur_0.01_epo_0.34_ra_114.89723285886_dec_-32.63446552691_phase_curve.png', 'pow_34.256405_per_83.32688_TIC0000000834663608_cam_2_ccd_4_dur_0.01_epo_0.45_ra_120.20372180197_dec_-22.31521546579_phase_curve.png', 'pow_8.886609_per_18.29262_TIC0000000814942257_cam_3_ccd_1_dur_0.01_epo_0.5933333_ra_131.00579830435_dec_-49.05161604217_phase_curve.png', 'pow_89.07018_per_54.16702_TIC0000000837165572_cam_1_ccd_2_dur_0.01_epo_0.22333333_ra_132.11180436752_dec_-3.80194294182_phase_curve.png', 'pow_39.23712_per_204.99564_TIC0000000835141062_cam_2_ccd_4_dur_0.05_epo_0.56666666_ra_123.30811488297_dec_-18.04339461257_phase_curve.png', 'pow_54.938015_per_130.00756_TIC0000000836673418_cam_1_ccd_2_dur_0.01_epo_0.7833333_ra_129.12180986154_dec_-9.94669597204_phase_curve.png', 'pow_112.54684_per_138.5827_tic0000000455206965_cam_1_ccd_4_dur_0.05_epo_0.0_ra_125.22306633609_dec_0.14541671625_phase_curve.png', 'pow_53.50614_per_110.58324_tic0000000800605802_cam_1_ccd_4_dur_0.05_epo_0.21666667_ra_123.3398562745_dec_10.16691476075_phase_curve_720.png', 'pow_97.85694_per_44.66602_TIC0000000773035804_cam_2_ccd_1_dur_0.01_epo_0.34666666_ra_116.6075013465_dec_-34.68259137666_phase_curve.png', 'pow_9.213994_per_17.56346_TIC0000000745043532_cam_2_ccd_1_dur_0.022222223_epo_0.15555556_ra_108.61843924472_dec_-22.99178789213_phase_curve.png', 'pow_51.09552_per_212.15792_TIC0000000833333751_cam_2_ccd_3_dur_0.05_epo_0.016666668_ra_123.49041522844_dec_-23.99465811836_phase_curve.png', 'pow_27.587631_per_113.33167_TIC0000000783835427_cam_2_ccd_4_dur_0.01_epo_0.72999996_ra_119.76284614778_dec_-16.42014359229_phase_curve.png', 'pow_81.327156_per_54.44322_TIC0000000783672186_cam_2_ccd_4_dur_0.01_epo_0.12666667_ra_119.3336887698_dec_-18.32452852098_phase_curve.png', 'pow_34.646202_per_46.66935_TIC0000000754904203_cam_1_ccd_1_dur_0.01_epo_0.093333334_ra_117.98932465635_dec_-4.46374533574_phase_curve.png', 'pow_52.498394_per_113.93112_tic0000000452954413_cam_1_ccd_4_dur_0.05_epo_0.6333333_ra_122.07905627863_dec_0.98336148012_phase_curve_720.png', 'pow_30.047132_per_146.90602_TIC0000000783613209_cam_2_ccd_4_dur_0.05_epo_0.28333333_ra_115.10315663037_dec_-17.49042462289_phase_curve.png', 'pow_88.8063_per_65.55484_TIC0000000778202061_cam_2_ccd_1_dur_0.014925373_epo_0.24378109_ra_105.97609777023_dec_-30.78418444681_phase_curve.png', 'pow_44.818363_per_151.09282_TIC0000000748546003_cam_2_ccd_4_dur_0.05_epo_0.26666668_ra_114.45341004855_dec_-17.54992738656_phase_curve.png', 'pow_45.250866_per_214.67034_TIC0000000784122051_cam_2_ccd_4_dur_0.05_epo_0.93333334_ra_118.0704415543_dec_-14.92255059024_phase_curve.png', 'pow_26.958172_per_51.66472_TIC0000000750714465_cam_2_ccd_4_dur_0.01_epo_0.20333333_ra_119.07784022162_dec_-11.28662402558_phase_curve.png']
 
-fname = "pow_72.52995_per_74.44577_TIC0000000803616096_cam_1_ccd_3_dur_0.01_epo_0.72999996_ra_131.26583606681_dec_-1.42705212618_phase_curve"
-# fname = "pow_66.43712_per_25.71457_TIC0000000804368061_cam_1_ccd_3_dur_0.01_epo_0.39666665_ra_138.5436398888_dec_-1.21204428418_phase_curve"
-# fname = sys.argv[1]
-sector = 61
+for fname in fnames:
 
-gaia_tab = "/home/echickle/data/100pc_clean.fits"
-wd_tab = "/home/echickle/work/WDs.txt"
-tess_dir = "/home/echickle/data/s0061/s0061-lc/"
-atlas_dir = "/data/ATLAS/"
-out_dir = "/home/echickle/data/s0061/s0061-plot/"
+    # fname = "pow_66.43712_per_25.71457_TIC0000000804368061_cam_1_ccd_3_dur_0.01_epo_0.39666665_ra_138.5436398888_dec_-1.21204428418_phase_curve"
+    # fname = sys.argv[1]
+    sector = 61
 
-lcu.make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=100)
+    gaia_tab = "/home/echickle/data/100pc_clean.fits"
+    wd_tab = "/home/echickle/work/WDs.txt"
+    tess_dir = "/home/echickle/data/s0061/s0061-lc/"
+    atlas_dir = "/data/ATLAS/"
+    out_dir = "/home/echickle/data/s0061/s0061-plot/"
+
+    lcu.make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=100)
