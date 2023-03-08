@@ -308,25 +308,32 @@ def hr_digaram(gaia_tab, ra, dec, ax):
     coord = SkyCoord(ra=ra, dec=dec,
                      unit=(u.degree, u.degree), frame='icrs')
     j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
-    gmag_targ = j.get_results()['phot_g_mean_mag'][0]
-    bprp_targ = j.get_results()['bp_rp'][0]
-    ax.plot([bprp_targ], [gmag_targ], '^r')
+    if len(j.get_results()['phot_g_mean_mag']) > 0 and \
+       len(j.get_results()['bp_rp']) > 0:
+        gmag_targ = j.get_results()['phot_g_mean_mag'][0]
+        bprp_targ = j.get_results()['bp_rp'][0]
+        ax.plot([bprp_targ], [gmag_targ], '^r')
 
-def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200,n_std=3,wind=0.1,pmin=400/60,pmax=0.15,qmin=0.01,qmax=0.05):
+def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200,n_std=3,wind=0.1,pmin=400/60,pmax=0.15,qmin=0.01,qmax=0.05,ls=False):
 
     import pandas as pd
     import os
     from Period_Finding import BLS
     # fname example: pow_74.484985_per_162.49363_TIC0000000036085812_cam_1_ccd_1_dur_0.05_epo_0.6333333_ra_118.2292373099_dec_-6.24747586719_phase_curve.png
+    # ['pow', '54.41536417029577', 'per', '113.89214', 'TIC0000000452954413', 'cam', '1', 'ccd', '4', 'ra', '122.07905627863', 'dec', '0.98336148012', 'phase', 'curve.png']
 
     ticid = int(fname.split('_')[4][3:])
     cam = fname.split('_')[6]
     ccd = fname.split('_')[8]
     per = float(fname.split('_')[3]) / 1440
-    ra = float(fname.split('_')[14])
-    dec = float(fname.split('_')[16])    
-    # prefix = '_'.join(fname.split('_')[:-2])
-    prefix = '_'.join(fname.split('_')[:17])
+    if ls:
+        ra = float(fname.split('_')[10])
+        dec = float(fname.split('_')[12])    
+        prefix = '_'.join(fname.split('_')[:13])
+    else:
+        ra = float(fname.split('_')[14])
+        dec = float(fname.split('_')[16])    
+        prefix = '_'.join(fname.split('_')[:17])
 
     
     fig = plt.figure(figsize=(10,6), constrained_layout=True)
@@ -343,7 +350,6 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     ticid_list = np.load(tess_dir+'id'+suffix)
     ind = np.nonzero(ticid_list == ticid)[0][0]
     y = np.load(tess_dir+'lc'+suffix)[ind]
-    
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
     folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
     shift = np.max(folded_t) - np.min(folded_t)
@@ -363,14 +369,20 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     # >> load white dwarf catalog
     wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+')
     ind = np.nonzero(wd_cat[0].to_numpy() == ticid)[0][0]
-    gid = int(wd_cat.iloc[ind][3])
+    if not np.isnan(wd_cat.iloc[ind][3]):
+        gid = int(wd_cat.iloc[ind][3])
+    else:
+        gid = None
     if os.path.exists(atlas_dir+str(gid)):
         data = atlas_lc(atlas_dir+str(gid))
         t, y, dy = data[:,0], data[:,1], data[:,2]
-        t, y, dy, flag = prep_lc(t, y, n_std=n_std, wind=wind, dy=dy)
-
-        _, _, _, period, bls_power_best, freqs, power, dur, epo = \
-            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        try:
+            _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        except:
+            dy=np.ones(y.shape)
+            _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)            
         prefix1 = 'ATLAS_'+prefix+'_'
         make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
                          prefix=prefix1, freqs=freqs, power=power,
