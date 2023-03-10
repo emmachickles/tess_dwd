@@ -52,18 +52,21 @@ t, y = t[inds], y[inds]
 
 # >> bin
 dy = np.ones(y.shape)
-t, y, dy = lcu.bin_timeseries(t, y, dy, 200)
+t, y, dy = lcu.bin_timeseries(t, y, 60, dy=dy)
 
 # >> plot
-plt.figure()
-plt.plot(t, y, '.k', ms=1)
-shift = np.max(t) - np.min(t)        
-plt.plot(t+shift, y, '.k', ms=1) 
+shift = np.max(t) - np.min(t)
+plt.figure(figsize=(5,3))
+plt.errorbar(t, y, yerr=np.ones(len(y))*0.1,
+               fmt='.k', ms=1, elinewidth=1)
+plt.errorbar(t+shift, y, yerr=np.ones(len(y))*0.1,
+               fmt='.k', ms=1, elinewidth=1)
 plt.xlabel('Time [minutes]')
 plt.ylabel('Relative Flux')
-plt.savefig('/home/submit/echickle/gaia14aae_tglc_phase_curve.png')
+plt.tight_layout()
+plt.savefig('/home/submit/echickle/gaia14aae_tglc_phase_curve.png', dpi=300)
 
-plt.figure()
+plt.figure(figsize=(4,2))
 #plt.plot(freqs, power, '-k', lw=0.5, alpha=0.7)
 plt.plot(freqs, power, '.k', ms=0.5, alpha=0.7)
 plt.xlabel('Frequency [1/days]')
@@ -71,20 +74,22 @@ plt.ylabel('BLS Power')
 plt.title('period: '+str(round(period*1440,2))+' min')
 plt.savefig('/home/submit/echickle/gaia14aae_tglc_spectrum.png')
 
-plt.figure()
+plt.figure(figsize=(5,3))
+plt.title('period :{}'.format(np.round(period*1440,2)))
 plt.plot(1440/freqs, power, '-k', lw=0.5, alpha=0.7)
 plt.xlim([0,120])
 plt.xlabel('Period [minutes]')
 plt.ylabel('BLS Power')
-plt.savefig('/home/submit/echickle/gaia14aae_tglc_spectrum_zoom.png')
+plt.tight_layout()
+plt.savefig('/home/submit/echickle/gaia14aae_tglc_spectrum_zoom.png', dpi=300)
 
-plt.figure()
+plt.figure(figsize=(4,2))
 plt.hist(power, bins=150)
 plt.xlabel('Power')
 plt.ylabel('Frequency bins')
 plt.savefig('/home/submit/echickle/gaia14aae_tglc_hist.png')
 
-plt.figure()
+plt.figure(figsize=(4,2))
 plt.hist(power,bins=500)
 plt.xlabel('Power')
 plt.ylabel('Frequency bins')

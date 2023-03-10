@@ -23,7 +23,7 @@ import sys
 cam = sys.argv[1]
 ccd = sys.argv[2]
 
-sector = 57
+sector = 62
 
 output_dir = '/data/submit/tess/echickle/'
 data_dir   = '/data/submit/echickle/s00{}-lc/'.format(sector)
