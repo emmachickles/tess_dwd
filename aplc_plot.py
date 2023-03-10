@@ -25,6 +25,8 @@ per = 49.7/1440
 # try sector 41
 # try tutorial phase folding
 
+t_orig, y_orig = t, y # !! 
+
 # >> remove nans
 inds = np.nonzero(~np.isnan(y))
 t, y = t[inds], y[inds]
@@ -45,6 +47,9 @@ else:
 y = flatten(t, y, window_length=wind, method='biweight')
 inds = np.nonzero(~np.isnan(y))
 t, y = t[inds], y[inds]
+
+t1, y1, flag = lcu.prep_lc(t_orig, y_orig, n_std=n_std, wind=wind) # !!
+pdb.set_trace()
 
 # >> BLS
 dy = np.ones(y.shape)
