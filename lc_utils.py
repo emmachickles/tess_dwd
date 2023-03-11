@@ -71,15 +71,12 @@ def bin_timeseries(t, y, bins, dy=None):
     return t_binned, y_binned, dy_binned
 
 
-def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
+def prep_lc(t, y, n_std=2, detrend="polyfit", wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
             ccd=None, coord=None, output_dir=None, dy=None):
-    from wotan import flatten
-
-    # if diag:
-    #     import sys
-    #     sys.path.insert(0, "/home/submit/echickle/work/")    
-    #     from KBB_Utils.KBB_Utils.Period_Finding import BLS
-    from Period_Finding import BLS
+    if detrend != "polyfit":
+        from wotan import flatten
+    if diag:
+        from Period_Finding import BLS
 
     flag = False
     
@@ -111,53 +108,39 @@ def prep_lc(t, y, n_std=2, wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
         make_phase_curve(t, y, period, dy=dy, output_dir=output_dir,
                              prefix=prefix, freqs=freqs, power=power,
                              ticid=ticid, bins=100)
-        
-    
-    # >> normalize        
-    if np.median(y) < 0:
-        y = y / np.abs(med) + 2.
-        if return_dy:
-            dy = dy/np.abs(med) + 2.
-    else:
-        y = y / med
-        if return_dy:
-            dy = dy/med
-    
-    # >> detrending 
-    y = flatten(t, y, window_length=wind, method='biweight')
-    inds = np.nonzero(~np.isnan(y))
-    t, y = t[inds], y[inds]
-    if return_dy:
-        dy = dy[inds]
 
-    if diag:
-        if not return_dy:
-            dy = np.ones(y.shape)                
-        t, y, dy, period, bls_power_best, freqs, power, dur, epo = \
-            BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=True)
-        prefix = 'TIC%016d'%ticid+'_1_cam_'+str(cam)+'_ccd_'+str(ccd)+\
-            '_pow_'+str(bls_power_best)+'_per_'+str(round(period*1440,2))+\
-            '_dur_'+str(dur)+'_epo_'+str(epo)+\
-            '_ra_{}_dec_{}_'.format(coord[0], coord[1])                
-        make_phase_curve(t, y, period, dy=dy, output_dir=output_dir,
-                             prefix=prefix, freqs=freqs, power=power,
-                             ticid=ticid, bins=100)
+    if detrend == "polyfit":
+        pval = np.polyfit(t, y, 10)
+        y_poly = np.polyval(pval, t)
+        y = y - y_poly
+        y += np.median(y_poly)
+            
+    # >> normalize    
+    if np.min(y) < 0:
+        y += 1 - np.min(y)
+    med = np.median(y)
+    y = y / med
+    if return_dy:
+        dy = dy/med
+
+    # >> detrending 
+    if detrend != "polyfit":
+        y = flatten(t, y, window_length=wind, method='biweight')
+        inds = np.nonzero(~np.isnan(y))
+        t, y = t[inds], y[inds]
+        if return_dy:
+            dy = dy[inds]
     
     if y.shape[0] < lim:
         flag = True
     
-    
-    # if diag:
-    #     make_phase_curve(t, y, 49.71/1440, dy=np.ones(y.shape)*0.1,
-    #                      output_dir='/home/submit/echickle/foo/',
-    #                      prefix='nstd'+str(n_std)+'-wind'+str(wind)+'-2-')
     if return_dy:
         return t, y, dy, flag
     return t, y, flag
     
 
 def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=None, power=None, ticid=None,
-                     bins=None, t0=None, bls=True):
+                     bins=None, dur=None, epo=None, bls=True):
     '''TODO:
     * bin phase curve
     * change x axis to orbital phase
@@ -196,6 +179,7 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
 
             
         fig, ax = plt.subplots(nrows=3, figsize=(8, 8))
+
         if type(ticid) != type(None):
             ax[0].set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
         else:
@@ -229,6 +213,7 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
         ax[2].set_xlabel('Time [minutes]')
         ax[2].set_ylabel('Relative Flux')
         fig.tight_layout()
+
 
         plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
         print('Saved '+output_dir+prefix+'phase_curve.png')

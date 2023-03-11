@@ -41,7 +41,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         search_params = dict(qmin=qmin, qmax=qmax,
                      # The logarithmic spacing of q
                             # dlogq=0.1,
-                            dlogq=0.5,
+                            dlogq=0.1,
 
                      # Number of overlapping phase bins
                      # to use for finding the best phi0
@@ -147,6 +147,13 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         period=1.0/f_best
         q_best, phi0_best = sols[np.argmax(bls_power)]        
 
+        # >> get delta (depth of transit)
+        phi = (t * f_best - phi0_best)
+        phi -= np.floor(phi)
+        transit = phi < q_best
+        out_transit = phi >= q_best
+        delta = np.abs(np.median(y[out_transit]) - np.median(y[transit]))
+
         # -- significance of peak ----------------------------------------------
         # >> compare to median
         bls_power_best=(np.max(bls_power)-np.median(bls_power))/(np.std(bls_power))
@@ -159,7 +166,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         #         freqs2 = freqs[idx]
         # bls_power_best=(np.max(bls_power)-np.mean(bls_power2))/np.std(bls_power2)        
 
-        return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best
+        return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best, delta
 
 # >> seems to be a repeat of the above function
 # def BLS_Full(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True,trim=True):
