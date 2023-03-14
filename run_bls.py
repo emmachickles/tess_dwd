@@ -7,10 +7,13 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
-output_dir = "/scratch/echickle/s0061/"
+# data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
+# output_dir = "/scratch/echickle/s0061/"
 
-sector, cam, ccd = 61, 1, 1
+data_dir = "/data/submit/echickle/s0061-lc/"
+output_dir = "/data/submit/echickle/s0061/"
+
+sector, cam, ccd = 61, 4, 1
 
 # ------------------------------------------------------------------------------
 
