@@ -307,20 +307,30 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
     # fname example: pow_74.484985_per_162.49363_TIC0000000036085812_cam_1_ccd_1_dur_0.05_epo_0.6333333_ra_118.2292373099_dec_-6.24747586719_phase_curve.png
     # ['pow', '54.41536417029577', 'per', '113.89214', 'TIC0000000452954413', 'cam', '1', 'ccd', '4', 'ra', '122.07905627863', 'dec', '0.98336148012', 'phase', 'curve.png']
 
-    ticid = int(fname.split('_')[4][3:])
-    cam = fname.split('_')[6]
-    ccd = fname.split('_')[8]
-    per = float(fname.split('_')[3]) / 1440
     if ls:
+        ticid = int(fname.split('_')[4][3:])
+        cam = fname.split('_')[6]
+        ccd = fname.split('_')[8]
+        per = float(fname.split('_')[3]) / 1440        
         ra = float(fname.split('_')[10])
         dec = float(fname.split('_')[12])    
         prefix = '_'.join(fname.split('_')[:13])
     else:
-        ra = float(fname.split('_')[14])
-        dec = float(fname.split('_')[16])    
-        prefix = '_'.join(fname.split('_')[:17])
+        ticid = int(fname.split('_')[6][3:])
+        cam = fname.split('_')[8]
+        ccd = fname.split('_')[10]
+        per = float(fname.split('_')[5]) / 1440        
+        ra = float(fname.split('_')[16])
+        dec = float(fname.split('_')[18])    
+        prefix = '_'.join(fname.split('_')[:19])
+        # ticid = int(fname.split('_')[4][3:])
+        # cam = fname.split('_')[6]
+        # ccd = fname.split('_')[8]
+        # per = float(fname.split('_')[3]) / 1440        
+        # ra = float(fname.split('_')[14])
+        # dec = float(fname.split('_')[16])    
+        # prefix = '_'.join(fname.split('_')[:17])
 
-    
     fig = plt.figure(figsize=(10,6), constrained_layout=True)
     gs = fig.add_gridspec(nrows=3, ncols=2)
     ax0 = fig.add_subplot(gs[0, 1])
@@ -362,11 +372,11 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
         data = atlas_lc(atlas_dir+str(gid))
         t, y, dy = data[:,0], data[:,1], data[:,2]
         try:
-            _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
                 BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         except:
             dy=np.ones(y.shape)
-            _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
                 BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)            
         prefix1 = 'ATLAS_'+prefix+'_'
         make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
@@ -414,7 +424,7 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
         
     if len(t) != 0:
         t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
-        _, _, _, period, bls_power_best, freqs, power, dur, epo = \
+        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         prefix1 = 'ZTF_'+prefix+'_'
         make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,

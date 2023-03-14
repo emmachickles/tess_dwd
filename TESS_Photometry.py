@@ -21,6 +21,7 @@ from photutils  import aperture_photometry, CircularAperture, SkyCircularAnnulus
 from photutils  import SkyCircularAperture
 from astropy.coordinates import SkyCoord
 
+# Kevin\'s\ UCBs\ -\ UCBs.csv
 # from KBB_Utils.KBB_Utils import LC_Tools
 import LC_Tools
 
@@ -206,6 +207,8 @@ def BJDConvert(times, RA, Dec, date_format='mjd', telescope='Palomar'):
     BJD_TCB=t2+delta
     return BJD_TCB
 
+
+
 def get_flux(sky_aperture, background, wcs, image):
 
     from photutils import ApertureStats
@@ -231,17 +234,19 @@ def process(f,sky_aperture,background,central_coord, tica=True):
 
     if tica:
         hd2=hdu_list[0].header    
-        t=hd['MJD-BEG']+100/86400
+        # t=hd['MJD-BEG']+100/86400
+        t = hd['STARTTJD'] # in TJD
+        orbitid = hd['ORBIT_ID']
         dt = hdu_list[0].data
     else:
         hd2=hdu_list[1].header # >> calibrated ffi
         t=hd['TSTART']+300/86400.0
+        t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg, date_format='mjd').value
         dt = hdu_list[1].data # >> calibrated ffi 
     n_dty = dt.shape[0]
     n_dtx = dt.shape[1]
     w = wcs.WCS(hd2)
 
-    t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg, date_format='mjd').value    
     
     #print(w)
 
@@ -263,14 +268,16 @@ def process(f,sky_aperture,background,central_coord, tica=True):
         phot_bkgsub = get_flux(sky_aperture, background, w, image)
 
         
-    return t, phot_bkgsub
-                
+    return t, orbidid, phot_bkgsub
+
+
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
             suffix='', tica=False):
     suffix = '-'+str(cam)+'-'+str(ccd)+suffix
     
     LC=[]
     ts=[]
+    orbit_id=[]
     
     trimmed_catalog, ticid, central_coord=source_list(p[0],catalog_main, ticid_main, tica=tica)
 
@@ -290,8 +297,9 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     failed_inds = []
     for f in p:
         try:
-            t, fluxes=process(f,aperture,background, central_coord, tica=tica)
+            t, oid, fluxes=process(f,aperture,background, central_coord, tica=tica)
             ts.append(t)
+            orbit_id.append(oid)
             LC.append(fluxes)
         except:
             failed_inds.append(n_iter)
@@ -305,10 +313,12 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
         #     np.save(out_dir+'lc'+suffix+'.npy', np.array(LC).T)
 
     # -- save timeseries -------------------------------------------------------
-    ts=np.array(ts)    
+    ts=np.array(ts)
+    orbit_id = np.array(orbit_id)
     LC=np.array(LC)
 
     np.save(out_dir+'ts'+suffix+'.npy', ts)    
+    np.save(out_dir+'oi'+suffix+'.npy', orbit_id)
     
     if mult_output:
         col = 0
@@ -324,7 +334,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
     # >> save ticid
     np.save(out_dir+'id'+suffix+'.npy', ticid)
-
+    
     # >> save coordinates
     ra = []
     dec = []
@@ -371,7 +381,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 #     ccd = sys.argv[2]
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-wd_cat    = '/home/echickle/work/WDs.txt'
+wd_cat    = '/home/echickle/data/WDs+UCBs.txt'
 data_dir = '/home/echickle/data/s0062/s0062/'
 out_dir = '/home/echickle/data/s0062/s0062-lc/'
 
@@ -384,7 +394,7 @@ tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 4, None
+cam, ccd = 2, None
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
