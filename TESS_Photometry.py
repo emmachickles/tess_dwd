@@ -267,8 +267,8 @@ def process(f,sky_aperture,background,central_coord, tica=True):
     else: # >> produce single light curve for each source
         phot_bkgsub = get_flux(sky_aperture, background, w, image)
 
-        
-    return t, orbidid, phot_bkgsub
+
+    return t, orbitid, phot_bkgsub
 
 
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
@@ -306,7 +306,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
         if n_iter // 10:
             print(n_iter)
 
-        n_iter += 1            
+        n_iter += 1
 
         # if n_iter // 10: # >> save intermediate products
         #     np.save(out_dir+'ts'+suffix+'.npy', np.array(ts))
@@ -394,7 +394,7 @@ tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 2, None
+cam, ccd = 1, None
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
