@@ -317,6 +317,10 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     orbit_id = np.array(orbit_id)
     LC=np.array(LC)
 
+    inds = np.argsort(ts)
+    ts = ts[inds]
+    orbit_id = orbit_id[inds]
+
     np.save(out_dir+'ts'+suffix+'.npy', ts)    
     np.save(out_dir+'oi'+suffix+'.npy', orbit_id)
     
@@ -326,10 +330,13 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
             for j in range(len(N_bkg_list)):
                 suffix1 = '-ap'+str(N_ap_list[i])+'-in'+str(N_bkg_list[j][0])+\
                     '-out'+str(N_bkg_list[j][1])
-                np.save(out_dir+'lc'+suffix+suffix1+'.npy', LC[:,col,:].T)
+                LC_p = LC[:,col,:].T
+                LC_p = LC_p[:,inds]
+                np.save(out_dir+'lc'+suffix+suffix1+'.npy', LC_p)
                 col += 1
     else:
         LC=LC.T
+        LC = LC[:,inds]
         np.save(out_dir+'lc'+suffix+'.npy', LC)
 
     # >> save ticid
@@ -394,7 +401,7 @@ tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 1, None
+cam, ccd = 3, None
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
