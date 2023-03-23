@@ -71,7 +71,7 @@ def bin_timeseries(t, y, bins, dy=None):
     return t_binned, y_binned, dy_binned
 
 
-def prep_lc(t, y, n_std=2, detrend="polyfit", wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
+def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
             ccd=None, coord=None, output_dir=None, dy=None):
     if detrend != "polyfit":
         from wotan import flatten
@@ -316,13 +316,23 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
         dec = float(fname.split('_')[12])    
         prefix = '_'.join(fname.split('_')[:13])
     else:
-        ticid = int(fname.split('_')[6][3:])
-        cam = fname.split('_')[8]
-        ccd = fname.split('_')[10]
-        per = float(fname.split('_')[5]) / 1440        
-        ra = float(fname.split('_')[16])
-        dec = float(fname.split('_')[18])    
-        prefix = '_'.join(fname.split('_')[:19])
+        # wid_14_pow_37.74368_snr_0.33903_per_8.88907_TIC0000000754984562_cam_1_ccd_1_dur_0.010638298_epo_0.8404255_ra_118.8871411275_dec_-1.78554163343_phase_curve.png
+        ticid = int(fname.split('_')[8][3:])
+        cam = fname.split('_')[10]
+        ccd = fname.split('_')[12]
+        per = float(fname.split('_')[7]) / 1440        
+        ra = float(fname.split('_')[18])
+        dec = float(fname.split('_')[20])    
+        prefix = '_'.join(fname.split('_')[:21])
+        
+        # ticid = int(fname.split('_')[6][3:])
+        # cam = fname.split('_')[8]
+        # ccd = fname.split('_')[10]
+        # per = float(fname.split('_')[5]) / 1440        
+        # ra = float(fname.split('_')[16])
+        # dec = float(fname.split('_')[18])    
+        # prefix = '_'.join(fname.split('_')[:19])
+        
         # ticid = int(fname.split('_')[4][3:])
         # cam = fname.split('_')[6]
         # ccd = fname.split('_')[8]
