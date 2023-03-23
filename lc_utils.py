@@ -65,14 +65,14 @@ def bin_timeseries(t, y, bins, dy=None):
             y_binned[i] = np.average(y_binned[i])
             dy_binned.append(err)
         else:
-            y_binned[i] = np.average(y_binned[i], weights=dy_binned[i])
+            y_binned[i] = np.average(y_binned[i], weights=1./dy_binned[i]**2)
             dy_binned[i] = np.average(dy_binned[i]/np.sqrt(npts))    
 
     return t_binned, y_binned, dy_binned
 
 
 def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
-            ccd=None, coord=None, output_dir=None, dy=None):
+            ccd=None, coord=None, output_dir=None, dy=None, poly_deg=10):
     if detrend != "polyfit":
         from wotan import flatten
     if diag:
@@ -80,6 +80,10 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
 
     flag = False
     
+    # >> sort time array
+    inds = np.argsort(t)
+    t, y = t[inds], y[inds]
+
     # >> remove nans
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
@@ -110,7 +114,7 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
                              ticid=ticid, bins=100)
 
     if detrend == "polyfit":
-        pval = np.polyfit(t, y, 10)
+        pval = np.polyfit(t, y, poly_deg)
         y_poly = np.polyval(pval, t)
         y = y - y_poly
         y += np.median(y_poly)
@@ -141,10 +145,7 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
 
 def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=None, power=None, ticid=None,
                      bins=None, dur=None, epo=None, bls=True):
-    '''TODO:
-    * bin phase curve
-    * change x axis to orbital phase
-    * repeat phase curve twice '''
+    '''Plot power spectrum and phase-folded light curve.'''
     from astropy.timeseries import TimeSeries
     from astropy.time import Time
     import astropy.units as u
@@ -161,9 +162,9 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
             dy = dy / med    
 
     # >> fold
-    t = t % period 
-    inds = np.argsort(t)
-    folded_t, folded_y = t[inds], y[inds]
+    folded_t = t % period 
+    inds = np.argsort(folded_t)
+    folded_t, folded_y = folded_t[inds], y[inds]
     if type(dy) != type(None):
         folded_dy = dy[inds]
     else:
@@ -172,13 +173,19 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
     if type(bins) != type(None):
         folded_t, folded_y, folded_dy = bin_timeseries(folded_t, folded_y, bins, dy=folded_dy)
     
-    if output_dir:
-        if type(freqs) == type(None):
-            _,_,_, _, bls_power_best, freqs, power, dur, epo = \
-                BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=False)
+    if output_dir: # -- make plot ----------------------------------------------
 
-            
-        fig, ax = plt.subplots(nrows=3, figsize=(8, 8))
+        # -- initialize figure -------------------------------------------------
+        fig = plt.figure(figsize=(8, 10), constrained_layout=True)
+        gs = fig.add_gridspec(nrows=4, ncols=2)
+        ax0_L = fig.add_subplot(gs[0, 0])
+        ax0_R = fig.add_subplot(gs[0, 1])
+        ax1 = fig.add_subplot(gs[1, :])
+        ax2 = fig.add_subplot(gs[2, :])    
+        ax3 = fig.add_subplot(gs[3, :])
+        ax = [ax0_L, ax1, ax2, ax3, ax0_R]
+        # fig, ax = plt.subplots(nrows=4, figsize=(8, 10))
+        # ----------------------------------------------------------------------
 
         if type(ticid) != type(None):
             ax[0].set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
@@ -186,6 +193,20 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
             ax[0].set_title('period: '+str(round(period*1440,2))+' min')
         ax[0].plot(freqs, power, '.k', ms=1, alpha=0.5)
         ax[0].set_xlabel('Frequency [1/days]')
+
+        wind = 1000
+        centr = np.argmin(np.abs(freqs - 1./period)) # >> ind of peak center
+        # >> threshold power (50% of peak)
+        ax[4].plot(freqs[centr-wind:centr+wind], power[centr-wind:centr+wind], '.k', ms=1)
+        ax[4].set_xlabel('Frequency [1/days]') 
+
+        thr_pow = np.median(power) + (power[centr] - np.median(power))/2
+        try:
+            thr_L = int(centr-wind + np.where(power[centr-wind:centr] < thr_pow)[0][-1])
+            thr_R = int(centr + np.where(power[centr:centr+wind] < thr_pow)[0][0])
+            ax[4].plot(freqs[thr_L:thr_R], power[thr_L:thr_R], '.r', ms=1)
+        except:
+            thr_R, thr_L = 0, 0
 
         ax[1].plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
         ax[1].set_xlim([0,120])
@@ -212,12 +233,23 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
             ax[2].plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
         ax[2].set_xlabel('Time [minutes]')
         ax[2].set_ylabel('Relative Flux')
+
+        ax[3].plot(t, y, '.k', ms=0.8, alpha=0.8)
+        ax[3].set_xlabel('Time [TJD]')
+        ax[3].set_ylabel('Relative Flux')
+
         fig.tight_layout()
-
-
+        prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
         plt.savefig(output_dir+prefix+'phase_curve.png', dpi=300)
         print('Saved '+output_dir+prefix+'phase_curve.png')
         plt.close()
+
+
+        np.save(output_dir+prefix+'bls_power.npy',
+                np.array([freqs[centr-wind:centr+wind],
+                          power[centr-wind:centr+wind]]).T )
+        np.save(output_dir+prefix+'phase_curve.npy',
+                np.array([folded_y, folded_dy]).T)
 
     else:
         return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
