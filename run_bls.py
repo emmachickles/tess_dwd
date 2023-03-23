@@ -18,7 +18,7 @@ output_dir = "/scratch/echickle/s0061/"
 
 # screen bls
 # sector, cam, ccd = 61, 2, 3
-sector, cam, ccd = 61, 1, 4
+sector, cam, ccd = 61, 2, 4
 
 # ------------------------------------------------------------------------------
 
