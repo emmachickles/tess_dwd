@@ -103,7 +103,7 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     if diag:
         if not return_dy:
             dy = np.ones(y.shape)        
-        t, y, dy, period, bls_power_best, freqs, power, dur, epo = \
+        t, y, dy, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
             BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=True)
         prefix = 'TIC%016d'%ticid+'_0_cam_'+str(cam)+'_ccd_'+str(ccd)+\
             '_pow_'+str(bls_power_best)+'_per_'+str(round(period*1440,2))+\
@@ -144,7 +144,7 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     
 
 def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=None, power=None, ticid=None,
-                     bins=None, dur=None, epo=None, bls=True):
+                     bins=None, dur=None, epo=None, bls=True, save_npy=False):
     '''Plot power spectrum and phase-folded light curve.'''
     from astropy.timeseries import TimeSeries
     from astropy.time import Time
@@ -245,11 +245,12 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
         plt.close()
 
 
-        np.save(output_dir+prefix+'bls_power.npy',
-                np.array([freqs[centr-wind:centr+wind],
-                          power[centr-wind:centr+wind]]).T )
-        np.save(output_dir+prefix+'phase_curve.npy',
-                np.array([folded_y, folded_dy]).T)
+        if save_npy:
+            np.save(output_dir+prefix+'bls_power.npy',
+                    np.array([freqs[centr-wind:centr+wind],
+                              power[centr-wind:centr+wind]]).T )
+            np.save(output_dir+prefix+'phase_curve.npy',
+                    np.array([folded_y, folded_dy]).T)
 
     else:
         return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
@@ -404,21 +405,21 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
 
     
     # >> load white dwarf catalog
-    wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+')
-    ind = np.nonzero(wd_cat[0].to_numpy() == ticid)[0][0]
-    if not np.isnan(wd_cat.iloc[ind][3]):
-        gid = int(wd_cat.iloc[ind][3])
+    wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
+    ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == ticid)[0][0]
+    if type(wd_cat.iloc[ind][3]) == type(""):
+        gid = str(wd_cat.iloc[ind][3])
     else:
         gid = None
     if os.path.exists(atlas_dir+str(gid)):
         data = atlas_lc(atlas_dir+str(gid))
         t, y, dy = data[:,0], data[:,1], data[:,2]
         try:
-            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
+            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
                 BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         except:
             dy=np.ones(y.shape)
-            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
+            _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
                 BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)            
         prefix1 = 'ATLAS_'+prefix+'_'
         make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
@@ -466,7 +467,7 @@ def make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins
         
     if len(t) != 0:
         t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
-        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
+        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         prefix1 = 'ZTF_'+prefix+'_'
         make_phase_curve(t, y, period, dy=dy, output_dir=out_dir,
