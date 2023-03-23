@@ -1,7 +1,8 @@
 # -- inputs --------------------------------------------------------------------
 
 n_std = 5
-detrend = "polyfit"
+detrend = "wotan"
+wind = 0.1
 pmin = 410 / 60 
 pmax = 0.13 
 qmin = 0.01
@@ -9,11 +10,15 @@ qmax = 0.15
 
 data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
 output_dir = "/scratch/echickle/s0061/"
+# data_dir = "/scratch/data/tess/lcur/ffi/s0057-lc/"
+# output_dir = "/scratch/echickle/s0057/"
 
 # data_dir = "/data/submit/echickle/s0061-lc/"
 # output_dir = "/data/submit/echickle/s0061/"
 
-sector, cam, ccd = 61, 4, 1
+# screen bls
+# sector, cam, ccd = 61, 2, 3
+sector, cam, ccd = 61, 1, 4
 
 # ------------------------------------------------------------------------------
 
@@ -36,9 +41,10 @@ import sys
 # cam = sys.argv[1]
 # ccd = sys.argv[2]
 
-bls_dir    = output_dir + 's00{}-bls-{}-{}-230310/'.format(sector,cam,ccd)
-ls_dir     = output_dir + 's00{}-ls-{}-{}-230310/'.format(sector, cam,ccd)
-diag_dir    = output_dir + 's00{}-diag-{}-{}-230310/'.format(sector, cam,ccd)
+os.makedirs(output_dir, exist_ok=True)
+bls_dir    = output_dir + 's00{}-bls-{}-{}-230322/'.format(sector,cam,ccd)
+ls_dir     = output_dir + 's00{}-ls-{}-{}-230322/'.format(sector, cam,ccd)
+diag_dir    = output_dir + 's00{}-diag-{}-{}-230322/'.format(sector, cam,ccd)
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(ls_dir, exist_ok=True)
 
@@ -57,29 +63,30 @@ ticid = np.load(data_dir+'id'+suffix).astype('int')
 inds = np.argsort(time)
 time, flux = time[inds], flux[:,inds]
 
-# ind = np.nonzero(ticid == 832987204)
+# ind = np.nonzero(ticid == 755200458)
 # flux = [flux[ind][0]]
 # coord = [coord[ind][0]]
 # ticid = [ticid[ind][0]]
 
 # >> remove completed
-fnames_ccd = os.listdir(bls_dir)
-ticid_ccd = [int(f.split('_')[6][3:]) for f in fnames_ccd]
-ticid_ccd = np.array(ticid_ccd)
-inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
-coord = np.delete(coord, comm1, axis=0)
-flux = np.delete(flux, comm1, axis=0)
-ticid = np.delete(ticid, comm1) 
+# fnames_ccd = os.listdir(bls_dir)
+# ticid_ccd = [int(f.split('_')[6][3:]) for f in fnames_ccd]
+# ticid_ccd = np.array(ticid_ccd)
+# inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
+# coord = np.delete(coord, comm1, axis=0)
+# flux = np.delete(flux, comm1, axis=0)
+# ticid = np.delete(ticid, comm1) 
 
 
 # >> compute BLS
 for i in range(len(flux)):
-    print(i)
+    if i % 50 == 0:
+        print(str(i)+" / "+str(len(flux)))
     y = flux[i]
     t = time
 
     # -- prep light curve --------------------------------------------------
-    t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend)
+    t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     dy = np.ones(y.shape)
     
     if flag:
@@ -89,14 +96,15 @@ for i in range(len(flux)):
     else:
 
         # -- compute BLS ---------------------------------------------------
-        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta = \
+        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
 
         # -- compute LS ----------------------------------------------------
-        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = LS_Astropy(t,y,dy,pmax=pmax)
+        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
+            LS_Astropy(t,y,dy,pmax=pmax)
 
         # -- plot phase curve ----------------------------------------------
-        prefix = 'pow_'+str(bls_power_best)+'_delta_'+str(round(delta,5))+\
+        prefix = 'pow_'+str(bls_power_best)+'_snr_'+str(round(snr,5))+\
                  '_per_'+str(round(period*1440,5))+\
             '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
             '_dur_'+str(dur)+'_epo_'+str(epo)+\
