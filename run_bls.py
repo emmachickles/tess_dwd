@@ -113,7 +113,7 @@ for i in range(len(flux)):
         # lcu.plot_phase_curve(t, y, period, bls_dir, bins=100, prefix=prefix)
         lcu.make_phase_curve(t, y, period, output_dir=bls_dir,
                              prefix=prefix, freqs=freqs, power=power,
-                             ticid=ticid[i], bins=100)
+                             ticid=ticid[i], bins=100, save_npy=True)
         
         prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
             '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
@@ -121,5 +121,5 @@ for i in range(len(flux)):
 
         lcu.make_phase_curve(t, y, ls_period, output_dir=ls_dir,
                              prefix=prefix, freqs=ls_freqs, power=ls_power,
-                             ticid=ticid[i], bins=100, bls=False)
+                             ticid=ticid[i], bins=100, bls=False, save_npy=True)
 
