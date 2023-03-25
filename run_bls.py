@@ -18,7 +18,7 @@ output_dir = "/scratch/echickle/s0061/"
 
 # screen bls
 # sector, cam, ccd = 61, 2, 3
-sector, cam, ccd = 61, 2, 4
+sector, cam, ccd = 61, 4, 1
 
 # ------------------------------------------------------------------------------
 
@@ -69,13 +69,13 @@ time, flux = time[inds], flux[:,inds]
 # ticid = [ticid[ind][0]]
 
 # >> remove completed
-# fnames_ccd = os.listdir(bls_dir)
-# ticid_ccd = [int(f.split('_')[6][3:]) for f in fnames_ccd]
-# ticid_ccd = np.array(ticid_ccd)
-# inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
-# coord = np.delete(coord, comm1, axis=0)
-# flux = np.delete(flux, comm1, axis=0)
-# ticid = np.delete(ticid, comm1) 
+fnames_ccd = os.listdir(bls_dir)
+ticid_ccd = [int(f.split('_')[8][3:]) for f in fnames_ccd]
+ticid_ccd = np.array(ticid_ccd)
+inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
+coord = np.delete(coord, comm1, axis=0)
+flux = np.delete(flux, comm1, axis=0)
+ticid = np.delete(ticid, comm1) 
 
 
 # >> compute BLS
