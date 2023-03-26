@@ -2,8 +2,8 @@
 
 
 lc_dir = "/scratch/echickle/grnd_lc/"
-lc_f = lc_dir + "s0061-1-1.txt"
-out_dir = "/home/echickle/data/s0061/s0061-bls-1-1-plot/" 
+lc_f = lc_dir + "s0061-cam1.txt"
+out_dir = "/home/echickle/data/s0061/s0061-cam1/" 
 gaia_tab = "/scratch/echickle/100pc_clean.fits"
 tess_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
 ls = False
