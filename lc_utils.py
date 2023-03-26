@@ -2,20 +2,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
-def load_atlas_lc(f, ra, dec):
+def load_atlas_lc(f, n_std=2):
+
+    ###MJD     m   dm uJy duJy F err chi/N  RA   Dec    x    y  maj min phi apfit Sky  ZP  Obs  GaiaID
     data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)    
+    Filter=np.loadtxt(f,usecols=(5),skiprows=0,dtype=str) 
 
     # >> filter by limiting magnitude
-    fil=np.loadtxt(f,usecols=(5),skiprows=0,dtype=str)
-    fil=fil[data[:,3]>17.5]
-    data=data[data[:,3]>17.5]
-
+    ZP=data[:,3] # >> zeropoint magnitude 
+    Filter=Filter[ZP>17.5]
+    data=data[ZP>17.5]
     t, y, dy = data[:,0], data[:,1], data[:,2]
-    if np.min(y) < 0:
-        y -= np.min(y)
+
+    # >> match medians across filters (np.unique(Filter) = ['c', 'o'])
+    med = np.median(y[Filter == 'c'])
+    med_o = np.median(y[Filter == 'o'])
+    y[Filter == 'o'] += med - med_o
+
+    # >> sigma clip
+    # std = np.std(y)
+    # inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
+    # t, y, dy = t[inds], y[inds], dy[inds] 
+
+    q3, q1 = np.percentile(y, [75 ,25])
+    iqr=(q3-q1)/2
+
+    good_idx=(y-np.median(y))<3*iqr
+    t=t[good_idx]
+    dy=dy[good_idx]
+    y=y[good_idx]
+
+    good_idx=(np.median(y)-y)<10*iqr
+    t=t[good_idx]
+    dy=dy[good_idx]
+    y=y[good_idx]
+
+    good_idx=dy>0
+    t=t[good_idx]
+    y=y[good_idx]
+    dy=dy[good_idx]  
+
+    # >> convert to BJD
+    coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
+    ra, dec = np.mean(coords[:,0]), np.mean(coords[:,1])
     t = BJDConvert(t,ra,dec, date_format='mjd').value    
 
-        
     return t, y, dy
 
 def get_atlas_lc(ticid, wd_tab, atlas_dir):
@@ -57,7 +88,7 @@ def get_ztf_lc(ra, dec):
 
     return fnames
 
-def load_ztf_lc(fnames):
+def load_ztf_lc(fnames, n_std=5):
     t, y, dy = [], [], []
     
     for i in range(len(fnames)):
@@ -69,6 +100,23 @@ def load_ztf_lc(fnames):
         dy.extend(data[:,2])    
 
     t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
+
+    q3, q1 = np.percentile(y, [75 ,25])
+    iqr=(q3-q1)/2
+
+    good_idx=(y-np.median(y))<3*iqr
+    t=t[good_idx]
+    dy=dy[good_idx]
+    y=y[good_idx]
+
+    good_idx=(np.median(y)-y)<10*iqr
+    t=t[good_idx]
+    dy=dy[good_idx]
+    y=y[good_idx]
+
+    # std = np.std(y)                                                                                                                                                          
+    # inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )                                                                                                       
+    # t, y, dy = t[inds], y[inds], dy[inds]  
 
     return t, y, dy
         
@@ -261,7 +309,7 @@ def make_phase_curve(t, y, period, dy=None, output_dir=None, prefix='', freqs=No
             thr_R, thr_L = 0, 0
 
         ax[1].plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-        ax[1].set_xlim([0,120])
+        # ax[1].set_xlim([0,140])
         ax[1].set_xlabel('Period [minutes]')
 
         if bls:
@@ -442,14 +490,14 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     y = np.load(tess_dir+'lc'+suffix)[ind]
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
     folded_t, folded_y, folded_dy = make_phase_curve(t, y, per, bins=bins)
-    plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period,
+    plot_phase_curve(ax0, folded_t, folded_y, folded_dy, per,
                      ylabel="TESS Relative Flux")
 
     # -- atlas phase curve ------------------------------------------------------
 
     # fname_atlas = get_atlas_lc(ticid, wd_tab, atlas_dir)
     if type(fname_atlas) == type(""):
-        t, y, dy = load_atlas_lc(fname_atlas, ra, dec)
+        t, y, dy = load_atlas_lc(fname_atlas)
         _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         # except:
@@ -476,7 +524,7 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
 
     # fnames = get_ztf_lc(ra, dec)
     if len(fnames_ztf) > 0:
-        t, y, dy = load_ztf_lc(fnames)        
+        t, y, dy = load_ztf_lc(fnames_ztf)    
         _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
         prefix1 = 'ZTF_'+prefix+'_'

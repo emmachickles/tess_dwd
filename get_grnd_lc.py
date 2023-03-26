@@ -33,6 +33,6 @@ for i in range(len(fnames)):
         fpath = fpaths[j]
         fname = fpath.split("/")[-1]
         os.system("mv "+fpath+" "+out_dir+fname)
-        out.write("{},{},{}\n".format(ticid, "ATLAS", fname))    
+        out.write("{},{},{}\n".format(ticid, "ZTF", fname))    
 
 out.close()

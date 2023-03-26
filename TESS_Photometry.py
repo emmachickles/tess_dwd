@@ -240,8 +240,9 @@ def process(f,sky_aperture,background,central_coord, tica=True):
         dt = hdu_list[0].data
     else:
         hd2=hdu_list[1].header # >> calibrated ffi
-        t=hd['TSTART']+300/86400.0
-        t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg, date_format='mjd').value
+        # t=hd['TSTART']+300/86400.0
+        #t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg, date_format='mjd').value
+
         dt = hdu_list[1].data # >> calibrated ffi 
     n_dty = dt.shape[0]
     n_dtx = dt.shape[1]
