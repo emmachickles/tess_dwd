@@ -87,25 +87,12 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
                         bls_power = bls_power[idx]
                         sols = sols[idx]
 
-        f_best = freqs[np.argmax(bls_power)]
-        # fname.write('f_best '+str(f_best)+'\n\n')
-        # fname.close()
+        i_best = np.argmax(bls_power)
+        bls_power_best = bls_power[i_best]
+        f_best = freqs[i_best]
         period=1.0/f_best
-        q_best, phi0_best = sols[np.argmax(bls_power)]        
+        q_best, phi0_best = sols[i_best]   
 
-        # >> get delta (depth of transit)
-        phi = (t * f_best - phi0_best)
-        phi -= np.floor(phi)
-        transit = phi < q_best
-        out_transit = phi >= q_best
-        delta = np.abs(np.median(y[out_transit]) - np.median(y[transit]))
-        err = np.sqrt(np.std(y[out_transit])**2 + np.std(y[transit])**2)
-        SNR = delta/err
-
-        # -- significance of peak ----------------------------------------------
-        # >> compare to median
-        bls_power_best=(np.max(bls_power)-np.median(bls_power))/(np.std(bls_power))
-        
         # >> finding second peak        
         # freqs_to_remove = [[f_best-0.1*f_best, f_best+0.1*f_best]]
         # for pair in freqs_to_remove:
@@ -114,7 +101,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         #         freqs2 = freqs[idx]
         # bls_power_best=(np.max(bls_power)-np.mean(bls_power2))/np.std(bls_power2)        
 
-        return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best, delta, SNR
+        return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best
 
 def LS(t,y,dy,pmin=2,remove=False):
         t=t-np.mean(t)

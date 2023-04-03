@@ -8,8 +8,8 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
-output_dir = "/scratch/echickle/s0061/"
+data_dir = "/scratch/data/tess/lcur/ffi/s0062-lc/"
+output_dir = "/scratch/echickle/s0062/"
 # data_dir = "/scratch/data/tess/lcur/ffi/s0057-lc/"
 # output_dir = "/scratch/echickle/s0057/"
 
@@ -18,7 +18,7 @@ output_dir = "/scratch/echickle/s0061/"
 
 # screen bls
 # sector, cam, ccd = 61, 2, 3
-sector, cam, ccd = 61, 4, 1
+sector, cam, ccd = 62, 1, 2
 
 # ------------------------------------------------------------------------------
 
@@ -42,9 +42,9 @@ import sys
 # ccd = sys.argv[2]
 
 os.makedirs(output_dir, exist_ok=True)
-bls_dir    = output_dir + 's00{}-bls-{}-{}-230322/'.format(sector,cam,ccd)
-ls_dir     = output_dir + 's00{}-ls-{}-{}-230322/'.format(sector, cam,ccd)
-diag_dir    = output_dir + 's00{}-diag-{}-{}-230322/'.format(sector, cam,ccd)
+bls_dir    = output_dir + 's00{}-bls-{}-{}-230328/'.format(sector,cam,ccd)
+ls_dir     = output_dir + 's00{}-ls-{}-{}-230328/'.format(sector, cam,ccd)
+diag_dir    = output_dir + 's00{}-diag-{}-{}-230328/'.format(sector, cam,ccd)
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(ls_dir, exist_ok=True)
 
@@ -63,19 +63,20 @@ ticid = np.load(data_dir+'id'+suffix).astype('int')
 inds = np.argsort(time)
 time, flux = time[inds], flux[:,inds]
 
-# ind = np.nonzero(ticid == 755200458)
+# !! 
+# ind = np.nonzero(ticid == 766092876)
 # flux = [flux[ind][0]]
 # coord = [coord[ind][0]]
 # ticid = [ticid[ind][0]]
 
 # >> remove completed
-fnames_ccd = os.listdir(bls_dir)
-ticid_ccd = [int(f.split('_')[8][3:]) for f in fnames_ccd]
-ticid_ccd = np.array(ticid_ccd)
-inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
-coord = np.delete(coord, comm1, axis=0)
-flux = np.delete(flux, comm1, axis=0)
-ticid = np.delete(ticid, comm1) 
+# fnames_ccd = os.listdir(bls_dir)
+# ticid_ccd = [int(f.split('_')[10][3:]) for f in fnames_ccd]
+# ticid_ccd = np.array(ticid_ccd)
+# inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
+# coord = np.delete(coord, comm1, axis=0)
+# flux = np.delete(flux, comm1, axis=0)
+# ticid = np.delete(ticid, comm1) 
 
 
 # >> compute BLS
@@ -96,30 +97,29 @@ for i in range(len(flux)):
     else:
 
         # -- compute BLS ---------------------------------------------------
-        _, _, _, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
+        t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
 
-        # -- compute LS ----------------------------------------------------
-        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
-            LS_Astropy(t,y,dy,pmax=pmax)
 
         # -- plot phase curve ----------------------------------------------
-        prefix = 'pow_'+str(bls_power_best)+'_snr_'+str(round(snr,5))+\
-                 '_per_'+str(round(period*1440,5))+\
-            '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
-            '_dur_'+str(dur)+'_epo_'+str(epo)+\
-            '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
+        suffix = '_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+\
+                 str(cam)+'_ccd_'+str(ccd)+\
+                 '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])
 
-        # lcu.plot_phase_curve(t, y, period, bls_dir, bins=100, prefix=prefix)
-        lcu.make_phase_curve(t, y, period, output_dir=bls_dir,
-                             prefix=prefix, freqs=freqs, power=power,
-                             ticid=ticid[i], bins=100, save_npy=True)
+        # !! save_npy
+        lcu.vet_plot(t, y, freqs, power, q, phi0, dy=dy, output_dir=bls_dir,
+                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=True)
+
+        # -- compute LS ----------------------------------------------------
+        # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
+        #     LS_Astropy(t,y,dy,pmax=pmax)
         
-        prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
-            '_TIC%016d'%ticid[i]+'_cam_'+str(cam)+'_ccd_'+str(ccd)+\
-            '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
+        # prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
+        #     '_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+str(cam)+'_ccd_'+str(ccd)+\
+        #     '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
 
-        lcu.make_phase_curve(t, y, ls_period, output_dir=ls_dir,
-                             prefix=prefix, freqs=ls_freqs, power=ls_power,
-                             ticid=ticid[i], bins=100, bls=False, save_npy=True)
+        # lcu.make_phase_curve(t, y, ls_period, output_dir=ls_dir,
+        #                      prefix=prefix, freqs=ls_freqs, power=ls_power,
+        #                      ticid=ticid[i], bins=100, bls=False, save_npy=True)
 
+        
