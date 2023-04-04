@@ -99,7 +99,7 @@ for i in range(len(flux)):
                  '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])
 
         # !! save_npy
-        lcu.vet_plot(t, y, freqs, power, q, phi0, dy=dy, output_dir=bls_dir,
+        lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
                      ticid=ticid[i], suffix=suffix, bins=100, save_npy=True)
 
         # -- compute LS ----------------------------------------------------
