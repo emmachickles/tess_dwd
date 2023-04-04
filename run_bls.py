@@ -8,17 +8,12 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-data_dir = "/scratch/data/tess/lcur/ffi/s0062-lc/"
-output_dir = "/scratch/echickle/s0062/"
-# data_dir = "/scratch/data/tess/lcur/ffi/s0057-lc/"
-# output_dir = "/scratch/echickle/s0057/"
+sector, cam, ccd = 62, 2, 3
 
-# data_dir = "/data/submit/echickle/s0061-lc/"
-# output_dir = "/data/submit/echickle/s0061/"
-
-# screen bls
-# sector, cam, ccd = 61, 2, 3
-sector, cam, ccd = 62, 1, 2
+data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
+output_dir = "/scratch/echickle/s%04d/"%sector
+bls_dir    = output_dir + 's00{}-bls-{}-{}-230403/'.format(sector,cam,ccd)
+# ls_dir     = output_dir + 's00{}-ls-{}-{}-230403/'.format(sector, cam,ccd)
 
 # ------------------------------------------------------------------------------
 
@@ -42,11 +37,8 @@ import sys
 # ccd = sys.argv[2]
 
 os.makedirs(output_dir, exist_ok=True)
-bls_dir    = output_dir + 's00{}-bls-{}-{}-230328/'.format(sector,cam,ccd)
-ls_dir     = output_dir + 's00{}-ls-{}-{}-230328/'.format(sector, cam,ccd)
-diag_dir    = output_dir + 's00{}-diag-{}-{}-230328/'.format(sector, cam,ccd)
 os.makedirs(bls_dir, exist_ok=True)
-os.makedirs(ls_dir, exist_ok=True)
+# os.makedirs(ls_dir, exist_ok=True)
 
 fail_txt = output_dir + 'cam'+str(cam)+'-ccd'+str(ccd)+'-failed.txt'
 with open(fail_txt, 'w') as f:
@@ -64,7 +56,7 @@ inds = np.argsort(time)
 time, flux = time[inds], flux[:,inds]
 
 # !! 
-# ind = np.nonzero(ticid == 766092876)
+# ind = np.nonzero(ticid == 1201247611)
 # flux = [flux[ind][0]]
 # coord = [coord[ind][0]]
 # ticid = [ticid[ind][0]]

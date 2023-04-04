@@ -248,6 +248,39 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     return t, y, flag
     
 
+def calc_snr(t, y, period, q, phi0):
+    # >> get epoch (center of first eclipse in time series)
+    epo = (phi0 + 0.5 * q) * period
+    epo += period + int((np.min(t) - epo) / period)*period
+
+    # -- phase fold ------------------------------------------------------------
+    phi= np.mod(t - epo, period) / period # >> phase
+    phi[phi > 0.5] -= 1 # >> center transit at phase=0    
+
+    # -- calculate SNR ---------------------------------------------------------
+    # >> in-eclipse datapoints:
+    transit = np.abs(phi) < 0.5*q
+    # >> in-eclipse and nearby datapoints:
+    near_transit = np.abs(phi) < 1.5*q
+    # >> other out-of-eclipse datapoints:
+    out_transit = np.abs(phi) > q
+
+    if np.count_nonzero(transit) == 0:
+        transit = np.abs(phi) < 0.6*q
+        if np.count_nonzero(transit) == 0:
+            transit = near_transit
+
+    # >> get delta (depth of transit)
+    avg_out = np.mean(y[out_transit])
+    avg_in = np.mean(y[transit])
+    err_out = np.std(y[out_transit]) / np.sqrt(len(y[out_transit]))
+    err_in = np.std(y[transit]) / np.sqrt(len(y[transit]))
+    delta = np.abs(avg_out - avg_in)
+    err = np.sqrt(err_out**2 + err_in**2)
+    snr = delta/err
+
+    return snr, phi, transit, near_transit
+
 def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
              ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000):
     '''Plot power spectrum and phase-folded light curve.
@@ -278,36 +311,9 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
     f_best = freqs[peak]
     period=1.0/f_best
 
-    # >> get epoch (center of first eclipse in time series)
-    epo = (phi0 + 0.5 * q) * period
-    epo += period + int((np.min(t) - epo) / period)*period
-
-    # -- phase fold ------------------------------------------------------------
-    phi= np.mod(t - epo, period) / period # >> phase
-    phi[phi > 0.5] -= 1 # >> center transit at phase=0
-
     # -- calculate SNR ---------------------------------------------------------
-    # >> in-eclipse datapoints:
-    transit = np.abs(phi) < 0.5*q
-    # >> in-eclipse and nearby datapoints:
-    near_transit = np.abs(phi) < q
-    # >> other out-of-eclipse datapoints:
-    out_transit = np.abs(phi) > q
-
-    if np.count_nonzero(transit) == 0:
-        transit = np.abs(phi) < 0.6*q
-        if np.count_nonzero(transit) == 0:
-            transit = near_transit
-
-    # >> get delta (depth of transit)
-    avg_out = np.mean(y[out_transit])
-    avg_in = np.mean(y[transit])
-    err_out = np.std(y[out_transit]) / np.sqrt(len(y[out_transit]))
-    err_in = np.std(y[transit]) / np.sqrt(len(y[transit]))
-    delta = np.abs(avg_out - avg_in)
-    err = np.sqrt(err_out**2 + err_in**2)
-    snr = delta/err
-
+    snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
+    
     # -- significance of peak ----------------------------------------------
     sig=(np.max(power)-np.median(power))/(np.std(power))
 
@@ -315,7 +321,8 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
     # >> threshold power (50% of peak)
     med_near = np.median(power[max(0,peak-nearpeak) : peak+nearpeak])
     thr_pow = med_near + (power[peak] - med_near)/2
-    thr_L = int(max(0,peak-nearpeak) + np.where(power[max(0,peak-nearpeak):peak] < thr_pow)[0][-1])
+    thr_L = int(max(0,peak-nearpeak) + \
+                np.where(power[max(0,peak-nearpeak):peak] < thr_pow)[0][-1])
     thr_R = int(peak + np.where(power[peak:peak+nearpeak] < thr_pow)[0][0])
 
 
@@ -387,13 +394,26 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
         ax3_L.set_xlabel('Time [TJD]')
         ax3_L.set_ylabel('Relative Flux')
 
-        if np.count_nonzero(near_transit) > 200:
-            phitran, ytran, dytran = bin_timeseries(phi[near_transit], y[near_transit],
-                                                    bins, dy=dy[near_transit])
-        else:
-            phitran, ytran, dytran = phi[near_transit], y[near_transit], dy[near_transit]
-        ax3_R.errorbar(phitran*period*1440, ytran, yerr=dytran,
-                       fmt='.k', ms=1, elinewidth=1)
+
+        # tran_len = np.count_nonzero(near_transit)
+        ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+        ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+        ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
+        w = max(1, int(0.1*np.count_nonzero(near_transit)))
+        inds = np.argsort(phi[near_transit])
+        phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
+        yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
+        ax3_R.plot(phiconv*period*1440, yconv, '-')
+        ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
+
+        # if np.count_nonzero(near_transit) > 200:
+        #     phitran, ytran, dytran = bin_timeseries(phi[near_transit], y[near_transit],
+        #                                             20, dy=dy[near_transit])
+        #     ax3_R.plot(phitran*period*1440, ytran, '-')
+        #     ax3_R.set_ylim([np.min(ytran)-0.1, np.max(ytran)+0.1])
+        #     phitran, ytran, dytran = phi[near_transit], y[near_transit], dy[near_transit]
+        #     ax3_R.errorbar(phitran*period*1440, ytran, yerr=dytran,
+        #                    fmt='.k', ms=1, elinewidth=1)
 
         # ax3_R.errorbar(phi[near_transit]*period*1440, y[near_transit], yerr=0.1,
         #                fmt='.k', elinewidth=0.8, alpha=0.9, ms=0.8)
@@ -404,14 +424,13 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
         fig.tight_layout()
 
         prefix = 'pow_'+str(sig)+'_snr_'+str(round(snr,5))+'_wid_'+str(wid)+\
-                 '_per_'+str(round(period*1440,8))+'_dur_'+str(round(q*period*1440, 5))
+                 '_per_'+str(round(period*1440,8))+'_q_'+str(q)+'_phi0_'+str(phi0)
 
         # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
         # and prefix.split('_')[0] != "TESS":
         #     prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
         plt.savefig(output_dir+prefix+suffix+'phase_curve.png', dpi=300)
         print('Saved '+output_dir+prefix+suffix+'phase_curve.png')
-
         plt.close()
 
 

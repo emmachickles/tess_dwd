@@ -1,5 +1,4 @@
 import cuvarbase.bls as bls
-import cuvarbase.lombscargle as gls
 import numpy as np
 
 def frequency_grid(t,y,pmin=3,pmax=True,qmin=2e-2,qmax=0.12):
