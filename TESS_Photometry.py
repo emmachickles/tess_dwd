@@ -391,8 +391,8 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 wd_cat    = '/home/echickle/data/WDs+UCBs.txt'
-data_dir = '/home/echickle/data/s0062/s0062/'
-out_dir = '/home/echickle/data/s0062/s0062-lc/'
+data_dir = '/home/echickle/data/s0063/s0063/'
+out_dir = '/home/echickle/data/s0063/s0063-lc/'
 
 # >> light curve parameters
 N_ap  = 0.7
@@ -403,7 +403,7 @@ tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 4, None
+cam, ccd = 1, None
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
                   tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
