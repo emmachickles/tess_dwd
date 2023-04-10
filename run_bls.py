@@ -8,7 +8,7 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-sector, cam, ccd = 62, 2, 3
+sector, cam, ccd = 62, 4, 2
 
 data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 output_dir = "/scratch/echickle/s%04d/"%sector
@@ -56,19 +56,19 @@ inds = np.argsort(time)
 time, flux = time[inds], flux[:,inds]
 
 # !! 
-# ind = np.nonzero(ticid == 1201247611)
+# ind = np.nonzero(ticid == 101433897) 
 # flux = [flux[ind][0]]
 # coord = [coord[ind][0]]
 # ticid = [ticid[ind][0]]
 
 # >> remove completed
-# fnames_ccd = os.listdir(bls_dir)
-# ticid_ccd = [int(f.split('_')[10][3:]) for f in fnames_ccd]
-# ticid_ccd = np.array(ticid_ccd)
-# inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
-# coord = np.delete(coord, comm1, axis=0)
-# flux = np.delete(flux, comm1, axis=0)
-# ticid = np.delete(ticid, comm1) 
+fnames_ccd = os.listdir(bls_dir)
+ticid_ccd = [int(f.split('_')[12][3:]) for f in fnames_ccd if f.split('.')[-1] == 'png']
+ticid_ccd = np.array(ticid_ccd)
+inter, comm1, comm2 = np.intersect1d(ticid, ticid_ccd, return_indices=True)
+coord = np.delete(coord, comm1, axis=0)
+flux = np.delete(flux, comm1, axis=0)
+ticid = np.delete(ticid, comm1) 
 
 
 # >> compute BLS
@@ -92,7 +92,6 @@ for i in range(len(flux)):
         t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
             BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
 
-
         # -- plot phase curve ----------------------------------------------
         suffix = '_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+\
                  str(cam)+'_ccd_'+str(ccd)+\
@@ -100,7 +99,7 @@ for i in range(len(flux)):
 
         # !! save_npy
         lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=True)
+                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=False)
 
         # -- compute LS ----------------------------------------------------
         # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \

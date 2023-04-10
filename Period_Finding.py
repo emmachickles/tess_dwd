@@ -32,9 +32,8 @@ def remove_harmonics(freqs, power, dur=None, epo=None):
         
 def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
 
-        t=t-np.mean(t)
-        y=y
-        dy=dy
+        tmean = np.mean(t)
+        t=t-tmean
 
         # set up search parameters
         search_params = dict(qmin=qmin, qmax=qmax,
@@ -99,6 +98,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
         #         bls_power2 = bls_power[idx]
         #         freqs2 = freqs[idx]
         # bls_power_best=(np.max(bls_power)-np.mean(bls_power2))/np.std(bls_power2)        
+        t=t+tmean # >> add back the mean 
 
         return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best
 
