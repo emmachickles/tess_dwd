@@ -234,15 +234,14 @@ def process(f,sky_aperture,background,central_coord, tica=True):
 
     if tica:
         hd2=hdu_list[0].header    
-        # t=hd['MJD-BEG']+100/86400
         t = hd['STARTTJD'] # in TJD
         cadence = hd['CADENCE']
+        orbit_number = hd['ORBIT_NUMBER']
         dt = hdu_list[0].data
     else:
         hd2=hdu_list[1].header # >> calibrated ffi
-        cadence = hd2['CADENCE']
-        # t=hd['TSTART']+300/86400.0
-        #t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg, date_format='mjd').value
+        cadence = hd['FFIINDEX']
+        t=hd['TSTART'] # in TJD
 
         dt = hdu_list[1].data # >> calibrated ffi 
     n_dty = dt.shape[0]
@@ -269,8 +268,11 @@ def process(f,sky_aperture,background,central_coord, tica=True):
     else: # >> produce single light curve for each source
         phot_bkgsub = get_flux(sky_aperture, background, w, image)
 
+    if tica:
 
-    return t, cadence, phot_bkgsub
+        return t, cadence, orbit_number, phot_bkgsub
+    else:
+        return t, cadence, phot_bkgsub
 
 
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
@@ -280,6 +282,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     LC=[]
     ts=[]
     cadence_list=[]
+    orbit_list = []
     
     trimmed_catalog, ticid, central_coord=source_list(p[0],catalog_main, ticid_main, tica=tica)
 
@@ -299,11 +302,16 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     failed_inds = []
     for f in p:
         try:
-            t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica)
+            if tica:
+                t, cn, oi, fluxes=process(f,aperture,background, central_coord, tica=tica)
+                orbit_list.append(oi)
+            else:
+                t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica)                
             ts.append(t)
             cadence_list.append(cn)
             LC.append(fluxes)
         except:
+            print('Failed '+str(n_iter))
             failed_inds.append(n_iter)
         if n_iter // 10:
             print(n_iter)
@@ -317,6 +325,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     # -- save timeseries -------------------------------------------------------
     ts=np.array(ts)
     cadence_list = np.array(cadence_list)
+    orbit_list = np.array(orbit_list)
     LC=np.array(LC)
 
     inds = np.argsort(ts)
@@ -325,6 +334,8 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
     np.save(out_dir+'ts'+suffix+'.npy', ts)    
     np.save(out_dir+'cn'+suffix+'.npy', cadence_list)
+    if tica:
+        np.save(out_dir+'oi'+suffix+'.npy', orbit_list)
     
     if mult_output:
         col = 0
@@ -353,29 +364,12 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     co = np.array([ra, dec]).T
     np.save(out_dir+'co'+suffix+'.npy', co)        
 
-# -- downloading ---------------------------------------------------------------
+# -- RUN SETTINGS --------------------------------------------------------------
 
-# data_dir = '/home/echickle/data/s0060/s0060/'
-# curl_file = data_dir + 'tesscurl_sector_60_ffic.sh'
-# cam, ccd = 1, 4
-# # download_cam(cam, curl_file, data_dir)
+data_dir = '/home/echickle/data/s0056/s0056/'
+curl_file = data_dir + 'tesscurl_sector_56_ffic.sh'
+cam, ccd = 4, 1
 # download_ccd(curl_file, data_dir, cam, ccd)
-
-# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# data_dir = '/home/echickle/data/s0056/s0056/'
-# curl_file = data_dir + 'tesscurl_sector_56_ffic.sh'
-# cam, ccd = 2, 4
-# # download_cam(cam, curl_file, data_dir)
-# download_ccd(curl_file, data_dir, cam, ccd)
-# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-# download_ccd(curl_file, data_dir, cam, ccd)
-# mydir = "/data/submit/tess/echickle/"
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 4)
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 1, 3)
-# download_ccd(mydir+"tesscurl_sector_58_ffic.sh",mydir+"s0058", 2, 3)
-# download_ccd(mydir+"tesscurl_sector_59_ffic.sh",mydir+"s0059", 2, 4)
-# download_ccd(mydir+"tesscurl_sector_60_ffic.sh",mydir+"s0060", 1, 3)
 
 # -- light curve extraction ----------------------------------------------------
 
@@ -390,22 +384,22 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 #     ccd = sys.argv[2]
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-wd_cat    = '/home/echickle/data/WDs+UCBs.txt'
-data_dir = '/home/echickle/data/s0063/s0063/'
-out_dir = '/home/echickle/data/s0063/s0063-lc/'
+wd_cat    = '/home/echickle/data/WDs.txt'
+data_dir = '/home/echickle/data/s0056/s0056/'
+out_dir = '/home/echickle/data/s0056/s0056-lc/'
 
 # >> light curve parameters
 N_ap  = 0.7
 N_in  = 1.5
 N_out = 2
 mult_output = False # >> produce multiple light curves per source
-tica = True
+tica = False
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 1, None
-run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd, mult_output=mult_output,
-                  tica=tica)
+cam, ccd = 4, 1
+run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                  mult_output=mult_output, tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # -- target run ----------------------------------------------------------------

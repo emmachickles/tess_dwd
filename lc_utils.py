@@ -101,19 +101,6 @@ def load_ztf_lc(fnames, n_std=5):
 
     t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
 
-    # q3, q1 = np.percentile(y, [75 ,25])
-    # iqr=(q3-q1)/2
-
-    # good_idx=(y-np.median(y))<3*iqr
-    # t=t[good_idx]
-    # dy=dy[good_idx]
-    # y=y[good_idx]
-
-    # good_idx=(np.median(y)-y)<10*iqr
-    # t=t[good_idx]
-    # dy=dy[good_idx]
-    # y=y[good_idx]
-
     std = np.std(y)
     inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
     t, y, dy = t[inds], y[inds], dy[inds]  
