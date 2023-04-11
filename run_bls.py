@@ -13,7 +13,7 @@ sector, cam, ccd = 61, 3, 3
 data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 output_dir = "/scratch/echickle/s%04d/"%sector
 bls_dir    = output_dir + 's00{}-bls-{}-{}-230403/'.format(sector,cam,ccd)
-# ls_dir     = output_dir + 's00{}-ls-{}-{}-230403/'.format(sector, cam,ccd)
+ls_dir     = output_dir + 's00{}-ls-{}-{}-230403/'.format(sector, cam,ccd)
 
 # ------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ import sys
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(bls_dir, exist_ok=True)
-# os.makedirs(ls_dir, exist_ok=True)
+os.makedirs(ls_dir, exist_ok=True)
 
 fail_txt = output_dir + 'cam'+str(cam)+'-ccd'+str(ccd)+'-failed.txt'
 with open(fail_txt, 'w') as f:
@@ -102,15 +102,14 @@ for i in range(len(flux)):
                      ticid=ticid[i], suffix=suffix, bins=100, save_npy=False)
 
         # -- compute LS ----------------------------------------------------
-        # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
-        #     LS_Astropy(t,y,dy,pmax=pmax)
-        
-        # prefix = 'pow_'+str(ls_power_best)+'_per_'+str(round(ls_period*1440,5))+\
-        #     '_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+str(cam)+'_ccd_'+str(ccd)+\
-        #     '_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])                
 
-        # lcu.make_phase_curve(t, y, ls_period, output_dir=ls_dir,
-        #                      prefix=prefix, freqs=ls_freqs, power=ls_power,
-        #                      ticid=ticid[i], bins=100, bls=False, save_npy=True)
+        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
+            LS_Astropy(t,y,dy,pmax=pmax)
 
-        
+        suffix='_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+str(cam)+'_ccd_'\
+            +str(ccd)+'_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])    
+
+        lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir,
+                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=False,
+                     bls=False)
+
