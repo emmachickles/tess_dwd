@@ -14,6 +14,10 @@ def load_atlas_lc(f, n_std=2):
     data=data[ZP>17.5]
     t, y, dy = data[:,0], data[:,1], data[:,2]
 
+    # >> remove nans
+    inds = np.nonzero(~np.isnan(y))
+    t, y, dy, Filter = t[inds], y[inds], dy[inds], Filter[inds]
+
     # >> match medians across filters (np.unique(Filter) = ['c', 'o'])
     med = np.median(y[Filter == 'c'])
     med_o = np.median(y[Filter == 'o'])
@@ -285,7 +289,7 @@ def calc_snr(t, y, period, q, phi0):
 
     return snr, phi, transit, near_transit
 
-def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
+def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
@@ -316,7 +320,8 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
     period=1.0/f_best
 
     # -- calculate SNR ---------------------------------------------------------
-    snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
+    if bls:
+        snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
     
     # -- significance of peak ----------------------------------------------
     sig=(np.max(power)-np.median(power))/(np.std(power))
@@ -353,27 +358,34 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
         ax0_R = fig.add_subplot(gs[0, 1])
         ax1 = fig.add_subplot(gs[1, :])
         ax2 = fig.add_subplot(gs[2, :])    
-        ax3_L = fig.add_subplot(gs[3, 0])
-        ax3_R = fig.add_subplot(gs[3, 1])
+        if bls:
+            ax3_L = fig.add_subplot(gs[3, 0])
+            ax3_R = fig.add_subplot(gs[3, 1])
+        else:
+            ax3 = fig.add_subplot(gs[3, :])
 
         # -- calculate companion radius ----------------------------------------
-        # >> semi-major axis in km, from Kepler's third law
-        a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
+        if bls:
+            # >> semi-major axis in km, from Kepler's third law
+            a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
 
-        dur = q*period*1440 # >> duration in minutes
-        vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
-        rp = vel*dur*60/2 # >> radius in km
-        rp = rp / 6370 # >> radius in Earth radii
-
+            dur = q*period*1440 # >> duration in minutes
+            vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
+            rp = vel*dur*60/2 # >> radius in km
+            rp = rp / 6370 # >> radius in Earth radii
 
         # -- title -------------------------------------------------------------
         if type(ticid) != type(None):
             # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
-            fig.suptitle('TIC '+str(ticid)+', period: '+\
-                          str(round(period*1440,2))+' min, duration: '+\
-                          str(round(dur,2))+' mins, snr: '+\
-                          str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
-                         ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
+            if bls:
+                fig.suptitle('TIC '+str(ticid)+', period: '+\
+                              str(round(period*1440,2))+' min, duration: '+\
+                              str(round(dur,2))+' mins, snr: '+\
+                              str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
+                             ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
+            else:
+                fig.suptitle('TIC '+str(ticid)+', period: '+\
+                             str(round(period*1440,2))+' min')
         else:
             # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
             fig.suptitle('period: '+str(round(period*1440,2))+' min')
@@ -414,43 +426,40 @@ def vet_plot(t, y, freqs, power, q, phi0, dy=None, output_dir=None, suffix='',
         ax2.set_xlabel('Time [minutes]')
         ax2.set_ylabel('Relative Flux')
 
-        ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
-        ax3_L.set_xlabel('Time [TJD]')
-        ax3_L.set_ylabel('Relative Flux')
+        if bls:
+            ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
+            ax3_L.set_xlabel('Time [TJD]')
+            ax3_L.set_ylabel('Relative Flux')
 
 
-        # tran_len = np.count_nonzero(near_transit)
-        ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-        ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-        ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
-        w = max(1, int(0.1*np.count_nonzero(near_transit)))
-        inds = np.argsort(phi[near_transit])
-        if np.count_nonzero(near_transit) > 0:
-            phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
-            yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
-            ax3_R.plot(phiconv*period*1440, yconv, '-')
-            ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
+            # tran_len = np.count_nonzero(near_transit)
+            ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+            ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
+            w = max(1, int(0.1*np.count_nonzero(near_transit)))
+            inds = np.argsort(phi[near_transit])
+            if np.count_nonzero(near_transit) > 0:
+                phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
+                yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
+                ax3_R.plot(phiconv*period*1440, yconv, '-')
+                ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
 
-        # if np.count_nonzero(near_transit) > 200:
-        #     phitran, ytran, dytran = bin_timeseries(phi[near_transit], y[near_transit],
-        #                                             20, dy=dy[near_transit])
-        #     ax3_R.plot(phitran*period*1440, ytran, '-')
-        #     ax3_R.set_ylim([np.min(ytran)-0.1, np.max(ytran)+0.1])
-        #     phitran, ytran, dytran = phi[near_transit], y[near_transit], dy[near_transit]
-        #     ax3_R.errorbar(phitran*period*1440, ytran, yerr=dytran,
-        #                    fmt='.k', ms=1, elinewidth=1)
-
-        # ax3_R.errorbar(phi[near_transit]*period*1440, y[near_transit], yerr=0.1,
-        #                fmt='.k', elinewidth=0.8, alpha=0.9, ms=0.8)
-        # ax3_R.plot(phi[transit]*period*1440, y[transit], '.r', ms=0.8)
-        ax3_R.set_xlabel('Time [minutes]')
-        ax3_R.set_ylabel('Relative Flux')
+            ax3_R.set_xlabel('Time [minutes]')
+            ax3_R.set_ylabel('Relative Flux')
+        else:
+            ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
+            ax3.set_xlabel('Time [TJD]')
+            ax3.set_ylabel('Relative Flux')
 
         fig.tight_layout()
 
-        prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
-                 str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
-                 '_phi0_'+str(phi0)
+        if bls:
+            prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
+                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
+                     '_phi0_'+str(phi0)
+        else:
+            prefix = 'pow_'+str(round(sig, 2))+'_wid_'+str(wid)+'_per_'+\
+                     str(round(period*1440,8))
 
         # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
         # and prefix.split('_')[0] != "TESS":

@@ -8,7 +8,7 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-sector, cam, ccd = 62, 4, 2
+sector, cam, ccd = 61, 3, 3
 
 data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 output_dir = "/scratch/echickle/s%04d/"%sector

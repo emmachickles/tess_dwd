@@ -1,16 +1,13 @@
 # ------------------------------------------------------------------------------
 
-
 lc_dir = "/scratch/echickle/grnd_lc/"
-# lc_f = lc_dir + "s0061-test.txt"
-# lc_f = lc_dir + "s0061-cam1-ccd3.txt"
-# lc_f = lc_dir + "s0061-cam1-hsnr.txt"
-lc_f = lc_dir + "s0061-2-1-msnr.txt"
+lc_f = lc_dir + "s0062-cam3-hsnr.txt"
 
-out_dir = "/scratch/echickle/s0061/s0061-1-crossmatch/" 
+sector = 62
+out_dir = "/scratch/echickle/s%04d/"%sector + "s%04d-3-crossmatch/"%sector
+tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 
 gaia_tab = "/scratch/echickle/100pc_clean.fits"
-tess_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
 ls = False
 
 # ------------------------------------------------------------------------------
@@ -40,7 +37,7 @@ qmax = 0.15
 # inter, comm1, comm2 = np.intersect1d(ticid, ticid_out, return_indices=True)
 # ticid = np.delete(ticid, comm1) 
 
-for i in range(len(ticid)):
+for i in range(0,len(ticid)):
     print(str(i)+'/'+str(len(ticid)))
     lc_info = lc_tab[lc_tab[:,0] == ticid[i]]
     fname_tess = lc_info[lc_info[:,1] == 'TESS'][0][2]
