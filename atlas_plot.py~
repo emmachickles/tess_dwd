@@ -1,0 +1,12 @@
+import lc_utils as lcu
+
+fname = 
+sector = 61
+
+gaia_tab = "/home/echickle/data/100pc_clean.fits"
+wd_tab = "/home/echickle/work/WDs.txt"
+tess_dir = "/home/echickle/data/s0061/s0061-lc/"
+atlas_dir = "/data/ATLAS/"
+out_dir = "/home/echickle/data/s0061/s0061-plot/"
+
+lcu.make_panel_plot(fname,sector,gaia_tab,wd_tab,tess_dir,atlas_dir,out_dir,bins=200)
