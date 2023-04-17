@@ -577,8 +577,8 @@ def hr_diagram(gaia_tab, ra, dec, ax):
         parallax = j.get_results()['parallax'][0]
         if str(parallax) == '--':
             abs_mag = None
-            ax.text(0.95, 0.05, "bp_rp: "+str(round(bprp_targ,2))+\
-                    "\ng_mean_mag: "+str(round(apparent_mag, 2))+\
+            ax.text(0.95, 0.05, "bp_rp: "+str(bprp_targ)+\
+                    "\ng_mean_mag: "+str(apparent_mag)+\
                     "\nparallax: "+str(parallax),
                     horizontalalignment="right", transform=ax.transAxes)
         else:
