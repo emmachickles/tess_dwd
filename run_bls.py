@@ -8,7 +8,7 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-sector, cam, ccd = 61, 3, 3
+sector, cam, ccd = 63, 3, 3 # stopped 63 3 3
 
 data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 output_dir = "/scratch/echickle/s%04d/"%sector
@@ -103,13 +103,13 @@ for i in range(len(flux)):
 
         # -- compute LS ----------------------------------------------------
 
-        _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
-            LS_Astropy(t,y,dy,pmax=pmax)
+        # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
+        #     LS_Astropy(t,y,dy,pmax=pmax)
 
-        suffix='_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+str(cam)+'_ccd_'\
-            +str(ccd)+'_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])    
+        # suffix='_TIC%016d'%ticid[i]+'_s%04d_'%sector+'cam_'+str(cam)+'_ccd_'\
+        #     +str(ccd)+'_ra_{}_dec_{}_'.format(coord[i][0], coord[i][1])    
 
-        lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir,
-                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=False,
-                     bls=False)
+        # lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir,
+        #              ticid=ticid[i], suffix=suffix, bins=100, save_npy=False,
+        #              bls=False)
 

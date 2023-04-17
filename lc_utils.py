@@ -589,12 +589,15 @@ def hr_diagram(gaia_tab, ra, dec, ax):
     
     hdul = fits.open(gaia_tab)
     gid = hdul[1].data['source_id']
-    gmag = hdul[1].data['phot_g_mean_mag']
     bp_rp = hdul[1].data['bp_rp']
+
+    parallax = hdul[1].data['parallax']
+    gmag = hdul[1].data['phot_g_mean_mag']
+    abs_mag = gmag+5*(np.log10(parallax)-2)
     
-    ax.plot(bp_rp, gmag, '.k', alpha=0.2, ms=0.05)
+    ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
     ax.set_xlim([-0.6, 5])
-    ax.set_ylim([21, 3.3])
+    ax.set_ylim([17.5, 0])
     ax.set_xlabel('Gaia BP-RP')
     ax.set_ylabel('Absolute Magnitude (Gaia G)')
 
@@ -610,8 +613,8 @@ def hr_diagram(gaia_tab, ra, dec, ax):
         parallax = j.get_results()['parallax'][0]
         if str(parallax) == '--':
             abs_mag = None
-            ax.text(0.95, 0.05, "bp_rp: "+str(round(bprp_targ,2))+\
-                    "\ng_mean_mag: "+str(round(apparent_mag, 2))+\
+            ax.text(0.95, 0.05, "bp_rp: "+str(bprp_targ)+\
+                    "\ng_mean_mag: "+str(apparent_mag)+\
                     "\nparallax: "+str(parallax),
                     horizontalalignment="right", transform=ax.transAxes)
         else:

@@ -5,9 +5,9 @@ import os
 
 snr_threshold = 10
 
-in_dir  = "/scratch/echickle/s0063/s0063-bls-3-1-230403/"
-out_dir = "/scratch/echickle/s0063/s0063-bls-3-1-hsnr/"
-out_fig = "/scratch/echickle/s0063/s0063-bls-3-1-snr"
+in_dir  = "/scratch/echickle/s0061/s0061-bls-4-3-230403/"
+out_dir = "/scratch/echickle/s0061/s0061-bls-4-3-hsnr/"
+out_fig = "/scratch/echickle/s0061/s0061-bls-4-3-snr"
 os.makedirs(out_dir)
 
 fnames = os.listdir(in_dir)
