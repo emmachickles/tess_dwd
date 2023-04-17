@@ -290,7 +290,8 @@ def calc_snr(t, y, period, q, phi0):
     return snr, phi, transit, near_transit
 
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000):
+             ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000,
+             plot_threshold=10):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
     * phi0 : start of eclipse phase
@@ -313,6 +314,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         if type(dy) != type(None):
             dy = dy / med    
 
+    # print('Normalization done!')
     # == vetting ===============================================================
 
     peak = np.argmax(power)
@@ -343,13 +345,15 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
     wid = thr_R - thr_L
 
+    # print('Vetting statistics done!')    
     # == bin ===================================================================
     if len(t) > 200:
         folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
     else:
         folded_t, folded_y, folded_dy = t%period, y, dy
-    
-    if output_dir: # == make plot ==============================================
+
+    # print('Fold light curve done!')
+    if output_dir and snr > plot_threshold: # == make plot =====================
 
         # -- initialize figure -------------------------------------------------
         fig = plt.figure(figsize=(8, 10), constrained_layout=True)
@@ -361,9 +365,13 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         if bls:
             ax3_L = fig.add_subplot(gs[3, 0])
             ax3_R = fig.add_subplot(gs[3, 1])
+            ax3_L.set_rasterized(True)
+            ax3_R.set_rasterized(True)
         else:
             ax3 = fig.add_subplot(gs[3, :])
+            ax3.set_rasterized(True)
 
+        # print('Figure initialized!')
         # -- calculate companion radius ----------------------------------------
         if bls:
             # >> semi-major axis in km, from Kepler's third law
@@ -373,7 +381,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
             rp = vel*dur*60/2 # >> radius in km
             rp = rp / 6370 # >> radius in Earth radii
-
+            # print('Calculated companion radius!')
         # -- title -------------------------------------------------------------
         if type(ticid) != type(None):
             # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
@@ -391,18 +399,23 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             fig.suptitle('period: '+str(round(period*1440,2))+' min')
 
         # ----------------------------------------------------------------------
-        ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5)
-        ax0_L.set_xlabel('Frequency [1/days]')
-
+        if len(freqs) < 1e6:
+            ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            ax0_L.set_xlabel('Frequency [1/days]')
+            # print('Plotted ax0_L')
+        
         # >> threshold power (50% of peak)
         ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
                    power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
         ax0_R.plot(freqs[thr_L:thr_R], power[thr_L:thr_R], '.r', ms=1)
-        ax0_R.set_xlabel('Frequency [1/days]') 
+        ax0_R.set_xlabel('Frequency [1/days]')
+        # print('Plotted ax0_R')
 
-        ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-        ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
-        ax1.set_xlabel('Period [minutes]')
+        if len(freqs) < 1e6:
+            ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
+            ax1.set_xlabel('Period [minutes]')
+            # print('Plotted ax1')
 
         if bls:
             ax0_L.set_ylabel('BLS Power')        
@@ -425,6 +438,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
         ax2.set_xlabel('Time [minutes]')
         ax2.set_ylabel('Relative Flux')
+        # print('Plotted ax2')
 
         if bls:
             ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
@@ -450,13 +464,30 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
             ax3.set_xlabel('Time [TJD]')
             ax3.set_ylabel('Relative Flux')
-
+        # print('Plotted ax3')
+        
         fig.tight_layout()
+        # print('Tight layout applied')
 
+        # ax0_L.set_rasterized(True)
+        # ax0_R.set_rasterized(True)
+        # ax1.set_rasterized(True)
+        # ax2.set_rasterized(True)
+        # print('Rasterize')
+
+        # ax0_L.clear()
+        # ax0_R.clear()
+        # ax1.clear()
+        # ax2.clear()
+        # ax3_L.clear()
+        # ax3_R.clear()
+        # print('Clear')
+        
         if bls:
             prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
-                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
-                     '_phi0_'+str(phi0)
+                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+\
+                     str(round(q,5))+\
+                     '_phi0_'+str(round(phi0,5))
         else:
             prefix = 'pow_'+str(round(sig, 2))+'_wid_'+str(wid)+'_per_'+\
                      str(round(period*1440,8))
@@ -464,8 +495,10 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
         # and prefix.split('_')[0] != "TESS":
         #     prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
+        # print('Saving...')        
         if bls:
-            plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=300)
+            # if snr > save_threshold:
+            plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=100)
             print('Saved '+output_dir+prefix+suffix+'_bls.png')
         else:
             plt.savefig(output_dir+prefix+suffix+'_ls.png', dpi=300)
@@ -480,9 +513,12 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             np.save(output_dir+prefix+'_phase_curve.npy',
                     np.array([folded_y, folded_dy]).T)
 
+    if bls:
+        return sig, snr, wid, period, period*1440, q, phi0
     else:
-        return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
+        return sig, wid, period, period*1440
 
+            
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period,
                      ylabel="Relative Flux"):
     shift = np.max(folded_t) - np.min(folded_t)    

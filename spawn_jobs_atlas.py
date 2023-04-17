@@ -11,17 +11,19 @@ data_dir = "/home/echickle/ATLAS_TEST/"
 p = [data_dir+f for f in os.listdir(data_dir)]
 
 N=int(sys.argv[1])
-quarter=int(np.ceil(len(p)/4.0))
+sect=int(np.ceil(len(p)/16))
 print(quarter)
-if N<3:
-    p=p[N*quarter:(N+1)*quarter]
+if N<15:
+    p=p[N*sect:(N+1)*sect]
 else:
-    p=p[N*quarter:]
+    p=p[N*sect:]
 
-p = p[:17] # !!
+# p = p[:9] # !!
+# p.insert(0, '/matchfiles/data2/ATLAS/3084580919978268672')
 
 if __name__ == '__main__':
-    N_p=4
+    N_p=2
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
-    pool.map(run_process, p)
+    result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0
+    np.savetxt('GPU'+str(N)+'.result',np.array(result),fmt='%i,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f')
