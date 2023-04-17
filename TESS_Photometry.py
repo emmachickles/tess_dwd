@@ -236,7 +236,6 @@ def process(f,sky_aperture,background,central_coord, tica=True):
         hd2=hdu_list[0].header    
         t = hd['STARTTJD'] # in TJD
         cadence = hd['CADENCE']
-        orbit_number = hd['ORBIT_NUMBER']
         dt = hdu_list[0].data
     else:
         hd2=hdu_list[1].header # >> calibrated ffi
@@ -268,11 +267,7 @@ def process(f,sky_aperture,background,central_coord, tica=True):
     else: # >> produce single light curve for each source
         phot_bkgsub = get_flux(sky_aperture, background, w, image)
 
-    if tica:
-
-        return t, cadence, orbit_number, phot_bkgsub
-    else:
-        return t, cadence, phot_bkgsub
+    return t, cadence, phot_bkgsub
 
 
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
@@ -302,11 +297,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     failed_inds = []
     for f in p:
         try:
-            if tica:
-                t, cn, oi, fluxes=process(f,aperture,background, central_coord, tica=tica)
-                orbit_list.append(oi)
-            else:
-                t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica)                
+            t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica)                
             ts.append(t)
             cadence_list.append(cn)
             LC.append(fluxes)
@@ -334,9 +325,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
     np.save(out_dir+'ts'+suffix+'.npy', ts)    
     np.save(out_dir+'cn'+suffix+'.npy', cadence_list)
-    if tica:
-        np.save(out_dir+'oi'+suffix+'.npy', orbit_list)
-    
+   
     if mult_output:
         col = 0
         for i in range(len(N_ap_list)):
@@ -368,7 +357,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 data_dir = '/home/echickle/data/s0056/s0056/'
 curl_file = data_dir + 'tesscurl_sector_56_ffic.sh'
-cam, ccd = 4, 1
+cam, ccd = 4, 3
 # download_ccd(curl_file, data_dir, cam, ccd)
 
 # -- light curve extraction ----------------------------------------------------
@@ -385,21 +374,21 @@ cam, ccd = 4, 1
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 wd_cat    = '/home/echickle/data/WDs.txt'
-data_dir = '/home/echickle/data/s0056/s0056/'
-out_dir = '/home/echickle/data/s0056/s0056-lc/'
+data_dir = '/home/echickle/data/s0063/s0063/'
+out_dir = '/home/echickle/data/s0063/s0063-lc/'
 
 # >> light curve parameters
 N_ap  = 0.7
 N_in  = 1.5
 N_out = 2
 mult_output = False # >> produce multiple light curves per source
-tica = False
+tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 4, 1
+cam, ccd = 1, 2
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                  mult_output=mult_output, tica=tica)
+                 mult_output=mult_output, tica=tica)
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # -- target run ----------------------------------------------------------------
