@@ -338,7 +338,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
     # -- calculate SNR ---------------------------------------------------------
     if bls:
-        snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
+        snr, phi, transit, near_transit, epo = calc_snr(t, y, period, q, phi0)
         
     # -- calculate fit ---------------------------------------------------------
     if not bls:
@@ -394,7 +394,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         # >> threshold power (50% of peak)
         ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
                    power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-        ax0_R.plot(freqs[thr_L:thr_R], power[thr_L:thr_R], '.r', ms=1)
+        ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
+                   power[peak-wid//2:peak+wid//2], '.r', ms=1)
         ax0_R.set_xlabel('Frequency [1/days]')
 
         if len(freqs) < 1e6:

@@ -44,7 +44,7 @@ def run_process(f):
     
     sig, snr, wid, period, period_min, q, phi0, dur, epo = res
 
-    return int(gaiaid), sig, snr, wid, period, period_min, q, phi0, dur epo
+    return int(gaiaid), sig, snr, wid, period, period_min, q, phi0, dur, epo
     
 
 if __name__ == '__main__':
