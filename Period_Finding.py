@@ -1,4 +1,3 @@
-import cuvarbase.bls as bls
 import numpy as np
 
 def frequency_grid(t,y,pmin=3,pmax=True,qmin=2e-2,qmax=0.12):
@@ -31,6 +30,7 @@ def remove_harmonics(freqs, power, dur=None, epo=None):
                 return freqs, power
         
 def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
+        import cuvarbase.bls as bls
 
         tmean = np.mean(t)
         t=t-tmean

@@ -141,53 +141,61 @@ def load_hipercam(logfile):
     return
 
 def bin_timeseries(t, y, bins, dy=None):
-    # >> should optimize this with scipy.stats.binned_statistic
-    inds = np.argsort(t)
-    t, y = t[inds], y[inds]
-    if type(dy) != type(None): 
-        dy = dy[inds]
-
-    trunc = len(y) // bins * bins
-    t_binned = np.split(t[:trunc], bins)
-    y_binned = np.split(y[:trunc], bins)
-    if type(dy) != type(None):
-        dy_binned = np.split(dy[:trunc], bins)
-
-    if trunc < len(y):
-        y_binned[-1] = np.append(y_binned[-1], y[trunc:])
-        t_binned[-1] = np.append(t_binned[-1], t[trunc:])
-        if type(dy) != type(None):
-            dy_binned[-1] = np.append(dy_binned[-1], dy[trunc:])
-
-    if type(dy) == type(None):
-        dy_binned = []
-    for i in range(bins):
-        t_binned[i] = np.average(t_binned[i])
-
-        # dy_binned[i] = 1 / np.sqrt(np.sum(dy_binned[i]))
-        npts = len(y_binned[i])
-        
-        if type(dy) == type(None):
-            err = np.std(y_binned[i]) / np.sqrt(npts)            
-            y_binned[i] = np.average(y_binned[i])
-            dy_binned.append(err)
+    if len(t) < bins*2:
+        t_binned, y_binned = t, y
+        if dy is None:
+            dy_binned = np.zeros(y.shape)
         else:
-            try:
+            dy_binned = dy
+    else:    
+        # >> should optimize this with scipy.stats.binned_statistic
+        inds = np.argsort(t)
+        t, y = t[inds], y[inds]
+        if dy is not None:
+            dy = dy[inds]
+
+        trunc = len(y) // bins * bins
+        t_binned = np.split(t[:trunc], bins)
+        y_binned = np.split(y[:trunc], bins)
+        if dy is not None:
+            dy_binned = np.split(dy[:trunc], bins)
+
+        if trunc < len(y):
+            y_binned[-1] = np.append(y_binned[-1], y[trunc:])
+            t_binned[-1] = np.append(t_binned[-1], t[trunc:])
+            if dy is not None:
+                dy_binned[-1] = np.append(dy_binned[-1], dy[trunc:])
+
+        if dy is None:
+            dy_binned = []
+        for i in range(bins):
+            t_binned[i] = np.average(t_binned[i])
+
+            npts = len(y_binned[i])
+
+            if dy is None:
+                err = np.std(y_binned[i]) / np.sqrt(npts)            
+                y_binned[i] = np.average(y_binned[i])
+                dy_binned.append(err)
+            else:
                 y_binned[i] = np.average(y_binned[i], weights=1./dy_binned[i]**2)
                 dy_binned[i] = np.average(dy_binned[i]/np.sqrt(npts))
-            except:
-                pdb.set_trace()
-                         
-     
+
     return np.array(t_binned), np.array(y_binned), np.array(dy_binned)
 
+def normalize_lc(y, dy=None):
+    if np.min(y) < 0:
+        y -= np.min(y)
+    med = np.median(y)
+    y = y/med
+    if dy is not None:
+        dy = dy/med
+    return y, dy
 
-def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, ticid=None, cam=None,
+def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=None,
             ccd=None, coord=None, output_dir=None, dy=None, poly_deg=10):
     if detrend != "polyfit":
         from wotan import flatten
-    if diag:
-        from Period_Finding import BLS
 
     flag = False
     
@@ -198,9 +206,8 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     # >> remove nans
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
-    return_dy=False
-    if type(dy) != type(None):
-        return_dy=True
+
+    if dy is not None:
         dy = dy[inds]
 
     # >> sigma-clip         
@@ -208,21 +215,8 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     std = np.std(y)
     inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
     t, y = t[inds], y[inds]
-    if return_dy:
+    if dy is not None:
         dy = dy[inds]    
-
-    if diag:
-        if not return_dy:
-            dy = np.ones(y.shape)        
-        t, y, dy, period, bls_power_best, freqs, power, dur, epo, delta, snr = \
-            BLS(t,y,dy,pmin=7,pmax=0.25,qmin=0.005,qmax=0.2,remove=True)
-        prefix = 'TIC%016d'%ticid+'_0_cam_'+str(cam)+'_ccd_'+str(ccd)+\
-            '_pow_'+str(bls_power_best)+'_per_'+str(round(period*1440,2))+\
-            '_dur_'+str(dur)+'_epo_'+str(epo)+\
-            '_ra_{}_dec_{}_'.format(coord[0], coord[1])                
-        vet_plot(t, y, period, dy=dy, output_dir=output_dir,
-                             prefix=prefix, freqs=freqs, power=power,
-                             ticid=ticid, bins=100)
 
     if detrend == "polyfit":
         pval = np.polyfit(t, y, poly_deg)
@@ -230,26 +224,21 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
         y = y - y_poly
         y += np.median(y_poly)
             
-    # >> normalize    
-    if np.min(y) < 0:
-        y += 1 - np.min(y)
-    med = np.median(y)
-    y = y / med
-    if return_dy:
-        dy = dy/med
+    # >> normalize
+    y, dy = normalize_lc(y, dy)
 
     # >> detrending 
     if detrend != "polyfit":
         y = flatten(t, y, window_length=wind, method='biweight')
         inds = np.nonzero(~np.isnan(y))
         t, y = t[inds], y[inds]
-        if return_dy:
+        if dy is not None:
             dy = dy[inds]
     
     if y.shape[0] < lim:
         flag = True
-    
-    if return_dy:
+
+    if dy is not None:
         return t, y, dy, flag
     return t, y, flag
     
@@ -289,39 +278,8 @@ def calc_snr(t, y, period, q, phi0):
 
     return snr, phi, transit, near_transit
 
-def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000):
-    '''Plot power spectrum and phase-folded light curve.
-    * q : ratio of eclipse duration to period
-    * phi0 : start of eclipse phase
-    * nearpeak: frequency bins near peak'''
-    from astropy.timeseries import TimeSeries
-    from astropy.time import Time
-    import astropy.units as u
-
-    # == normalize =============================================================
-    med = np.median(y)
-    if np.median(y) == 0: # ?? is this the right thing to do? 
-        y -= np.min(y)
-        med = np.median(y)
-    if np.median(y) < 0:
-        y = y / np.abs(med) + 2.
-        if type(dy) != type(None):
-            dy = dy / np.abs(med) + 2.
-    else:
-        y = y/med    
-        if type(dy) != type(None):
-            dy = dy / med    
-
-    # == vetting ===============================================================
-
+def calc_peak_stats(freqs, power, nearpeak=3000):
     peak = np.argmax(power)
-    f_best = freqs[peak]
-    period=1.0/f_best
-
-    # -- calculate SNR ---------------------------------------------------------
-    if bls:
-        snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
     
     # -- significance of peak ----------------------------------------------
     sig=(np.max(power)-np.median(power))/(np.std(power))
@@ -343,146 +301,185 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
     wid = thr_R - thr_L
 
-    # == bin ===================================================================
-    if len(t) > 200:
-        folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
-    else:
-        folded_t, folded_y, folded_dy = t%period, y, dy
+    return peak, sig, wid
+
+def calc_sine_fit(t, y, period):
+    from scipy.optimize import curve_fit
+    t_folded = t%period
+    w = 2*np.pi / period
+    def sinfunc(t, A, p, c):  return A * np.sin(w*t + p) + c
+    popt, pcov = curve_fit(sinfunc, t_folded, y)
+    A, p, c = popt # >> amplitude, phase, offset
+    fitfunc = sinfunc(t_folded, A, p, c)
+    err = np.mean( ( fitfunc - y ) ** 2)
+    return err, fitfunc
     
-    if output_dir: # == make plot ==============================================
+def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None,
+             suffix='', ticid=None, bins=100, bls=True, save_npy=False,
+             nearpeak=3000):
+    '''Plot power spectrum and phase-folded light curve.
+    * q : ratio of eclipse duration to period
+    * phi0 : start of eclipse phase
+    * nearpeak: frequency bins near peak'''
+    from astropy.timeseries import TimeSeries
+    from astropy.time import Time
+    import astropy.units as u
 
-        # -- initialize figure -------------------------------------------------
-        fig = plt.figure(figsize=(8, 10), constrained_layout=True)
-        gs = fig.add_gridspec(nrows=4, ncols=2)
-        ax0_L = fig.add_subplot(gs[0, 0])
-        ax0_R = fig.add_subplot(gs[0, 1])
-        ax1 = fig.add_subplot(gs[1, :])
-        ax2 = fig.add_subplot(gs[2, :])    
+    # == normalize =============================================================
+    y, dy = normalize_lc(y, dy)
+
+    # == vetting ===============================================================
+
+    # -- peak statistics -------------------------------------------------------
+    peak, sig, wid = calc_peak_stats(freqs, power, nearpeak=nearpeak)
+    f_best = freqs[peak]
+    period=1.0/f_best
+
+    # -- calculate SNR ---------------------------------------------------------
+    if bls:
+        snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
+        
+    # -- calculate fit ---------------------------------------------------------
+    if not bls:
+        fit, fitfunc = calc_sine_fit(t, y, period)
+        
+    # == bin ===================================================================
+    folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
+    
+    # == make plot =============================================================
+
+    # -- initialize figure -----------------------------------------------------
+    fig = plt.figure(figsize=(8, 10), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=4, ncols=2)
+    ax0_L = fig.add_subplot(gs[0, 0])
+    ax0_R = fig.add_subplot(gs[0, 1])
+    ax1 = fig.add_subplot(gs[1, :])
+    ax2 = fig.add_subplot(gs[2, :])    
+    if bls:
+        ax3_L = fig.add_subplot(gs[3, 0])
+        ax3_R = fig.add_subplot(gs[3, 1])
+    else:
+        ax3 = fig.add_subplot(gs[3, :])
+
+    # -- calculate companion radius --------------------------------------------
+    if bls:
+        # >> semi-major axis in km, from Kepler's third law
+        a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
+
+        dur = q*period*1440 # >> duration in minutes
+        vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
+        rp = vel*dur*60/2 # >> radius in km
+        rp = rp / 6370 # >> radius in Earth radii
+
+    # -- title -----------------------------------------------------------------
+    if ticid is not None:
+        # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
         if bls:
-            ax3_L = fig.add_subplot(gs[3, 0])
-            ax3_R = fig.add_subplot(gs[3, 1])
+            fig.suptitle('TIC '+str(ticid)+', period: '+\
+                          str(round(period*1440,2))+' min, duration: '+\
+                          str(round(dur,2))+' mins, snr: '+\
+                          str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
+                         ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
         else:
-            ax3 = fig.add_subplot(gs[3, :])
+            fig.suptitle('TIC '+str(ticid)+', period: , '+\
+                         str(round(period*1440,2))+' min, mse: '+\
+                         str(round(fit,5)))
+    else:
+        # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
+        fig.suptitle('period: '+str(round(period*1440,2))+' min')
 
-        # -- calculate companion radius ----------------------------------------
-        if bls:
-            # >> semi-major axis in km, from Kepler's third law
-            a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
+    # --------------------------------------------------------------------------
+    ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5)
+    ax0_L.set_xlabel('Frequency [1/days]')
 
-            dur = q*period*1440 # >> duration in minutes
-            vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
-            rp = vel*dur*60/2 # >> radius in km
-            rp = rp / 6370 # >> radius in Earth radii
+    # >> threshold power (50% of peak)
+    ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+               power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+    ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
+               power[peak-wid//2:peak+wid//2], '.r', ms=1)
+    ax0_R.set_xlabel('Frequency [1/days]') 
 
-        # -- title -------------------------------------------------------------
-        if type(ticid) != type(None):
-            # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
-            if bls:
-                fig.suptitle('TIC '+str(ticid)+', period: '+\
-                              str(round(period*1440,2))+' min, duration: '+\
-                              str(round(dur,2))+' mins, snr: '+\
-                              str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
-                             ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
-            else:
-                fig.suptitle('TIC '+str(ticid)+', period: '+\
-                             str(round(period*1440,2))+' min')
-        else:
-            # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
-            fig.suptitle('period: '+str(round(period*1440,2))+' min')
+    ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+    ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
+    ax1.set_xlabel('Period [minutes]')
 
-        # ----------------------------------------------------------------------
-        ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5)
-        ax0_L.set_xlabel('Frequency [1/days]')
+    if bls:
+        ax0_L.set_ylabel('BLS Power')        
+        ax1.set_ylabel('BLS Power')
+    else:
+        ax0_L.set_ylabel('LS Power')        
+        ax1.set_ylabel('LS Power')
 
-        # >> threshold power (50% of peak)
-        ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
-                   power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-        ax0_R.plot(freqs[thr_L:thr_R], power[thr_L:thr_R], '.r', ms=1)
-        ax0_R.set_xlabel('Frequency [1/days]') 
-
-        ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-        ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
-        ax1.set_xlabel('Period [minutes]')
-
-        if bls:
-            ax0_L.set_ylabel('BLS Power')        
-            ax1.set_ylabel('BLS Power')
-        else:
-            ax0_L.set_ylabel('LS Power')        
-            ax1.set_ylabel('LS Power')
-
-            
-        folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
-        shift = np.max(folded_t) - np.min(folded_t)        
-        if type(bins) != type(None):
-            ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
-                           fmt='.k', ms=1, elinewidth=1)
-            ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
-                           fmt='.k', ms=1, elinewidth=1)
-
-        else:
-            ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
-            ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-        ax2.set_xlabel('Time [minutes]')
-        ax2.set_ylabel('Relative Flux')
-
-        if bls:
-            ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
-            ax3_L.set_xlabel('Time [TJD]')
-            ax3_L.set_ylabel('Relative Flux')
-
-
-            # tran_len = np.count_nonzero(near_transit)
-            ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-            ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
-            w = max(1, int(0.1*np.count_nonzero(near_transit)))
-            inds = np.argsort(phi[near_transit])
-            if np.count_nonzero(near_transit) > 0:
-                phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
-                yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
-                ax3_R.plot(phiconv*period*1440, yconv, '-')
-                ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
-
-            ax3_R.set_xlabel('Time [minutes]')
-            ax3_R.set_ylabel('Relative Flux')
-        else:
-            ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
-            ax3.set_xlabel('Time [TJD]')
-            ax3.set_ylabel('Relative Flux')
-
-        fig.tight_layout()
-
-        if bls:
-            prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
-                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
-                     '_phi0_'+str(phi0)
-        else:
-            prefix = 'pow_'+str(round(sig, 2))+'_wid_'+str(wid)+'_per_'+\
-                     str(round(period*1440,8))
-
-        # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
-        # and prefix.split('_')[0] != "TESS":
-        #     prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
-        if bls:
-            plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=300)
-            print('Saved '+output_dir+prefix+suffix+'_bls.png')
-        else:
-            plt.savefig(output_dir+prefix+suffix+'_ls.png', dpi=300)
-            print('Saved '+output_dir+prefix+suffix+'_ls.png')
-        plt.close()
-
-
-        if save_npy:
-            np.save(output_dir+prefix+'_bls_power.npy',
-                    np.array([freqs[max(0,peak-nearpeak):peak+nearpeak],
-                              power[max(0,peak-nearpeak):peak+nearpeak]]).T )
-            np.save(output_dir+prefix+'_phase_curve.npy',
-                    np.array([folded_y, folded_dy]).T)
+    folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
+    shift = np.max(folded_t) - np.min(folded_t)
+    if not bls:
+        ax2.plot(t%period*1440, fitfunc, '.r')
+        ax2.plot((t%period + shift)*1440, fitfunc, '.r')
+    if bins is not None:
+        ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
+                       fmt='.k', ms=1, elinewidth=1)
+        ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+                       fmt='.k', ms=1, elinewidth=1)
 
     else:
-        return np.array(folded_t), np.array(folded_y), np.array(folded_dy)
+        ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
+        ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
+    ax2.set_xlabel('Time [minutes]')
+    ax2.set_ylabel('Relative Flux')
 
+    if bls:
+        ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
+        ax3_L.set_xlabel('Time [TJD]')
+        ax3_L.set_ylabel('Relative Flux')
+
+
+        # tran_len = np.count_nonzero(near_transit)
+        ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+        ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+        ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
+        w = max(1, int(0.1*np.count_nonzero(near_transit)))
+        inds = np.argsort(phi[near_transit])
+        if np.count_nonzero(near_transit) > 0:
+            phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
+            yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
+            ax3_R.plot(phiconv*period*1440, yconv, '-')
+            ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
+
+        ax3_R.set_xlabel('Time [minutes]')
+        ax3_R.set_ylabel('Relative Flux')
+    else:
+        ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
+        ax3.set_xlabel('Time [TJD]')
+        ax3.set_ylabel('Relative Flux')
+
+    fig.tight_layout()
+
+    if bls:
+        prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
+                 str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
+                 '_phi0_'+str(phi0)
+    else:
+        prefix = 'pow_'+str(round(sig, 2))+'_mse_'+str(round(fit,3))+'_wid_'+\
+            str(wid)+'_per_'+str(round(period*1440,8))
+
+    # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
+    # and prefix.split('_')[0] != "TESS":
+    #     prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
+    if bls:
+        plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=300)
+        print('Saved '+output_dir+prefix+suffix+'_bls.png')
+    else:
+        plt.savefig(output_dir+prefix+suffix+'_ls.png', dpi=300)
+        print('Saved '+output_dir+prefix+suffix+'_ls.png')
+    plt.close()
+
+    if save_npy:
+        np.save(output_dir+prefix+'_bls_power.npy',
+                np.array([freqs[max(0,peak-nearpeak):peak+nearpeak],
+                          power[max(0,peak-nearpeak):peak+nearpeak]]).T )
+        np.save(output_dir+prefix+'_phase_curve.npy',
+                np.array([folded_y, folded_dy]).T)
+    
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period,
                      ylabel="Relative Flux"):
     shift = np.max(folded_t) - np.min(folded_t)    
@@ -588,22 +585,14 @@ def hr_diagram(gaia_tab, ra, dec, ax):
                     "\nabs_mag: "+str(round(abs_mag, 2)),
                     horizontalalignment="right", transform=ax.transAxes) 
 
-def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,bins=100,n_std=5,wind=0.1,pmin=410/60,pmax=0.13,qmin=0.01,qmax=0.15,ls=False):
+def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,bins=100,n_std=5,wind=0.1,pmin=410/60,pmax=0.13,qmin=0.01,qmax=0.15,bls=False):
 
     import pandas as pd
     import os
     from Period_Finding import BLS
 
     fname_tess = fname_tess.split('_')    
-    if ls:
-        ticid = int(fname_tess[4][3:])
-        cam = fname_tess[6]
-        ccd = fname_tess[8]
-        per = float(fname_tess[3]) / 1440        
-        ra = float(fname_tess[10])
-        dec = float(fname_tess[12])    
-        prefix = '_'.join(fname_tess[:13])
-    else:
+    if bls:
         ticid = int(fname_tess[12][3:])
         cam = fname_tess[15]
         ccd = fname_tess[17]
@@ -611,6 +600,14 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         ra = float(fname_tess[19])
         dec = float(fname_tess[21])    
         prefix = '_'.join(fname_tess[:22])
+    else:
+        ticid = int(fname_tess[4][3:])
+        cam = fname_tess[6]
+        ccd = fname_tess[8]
+        per = float(fname_tess[3]) / 1440        
+        ra = float(fname_tess[10])
+        dec = float(fname_tess[12])    
+        prefix = '_'.join(fname_tess[:13])        
         
     fig = plt.figure(figsize=(16,6), constrained_layout=True)
     gs = fig.add_gridspec(nrows=3, ncols=4)
@@ -625,10 +622,6 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     ax8 = fig.add_subplot(gs[1, 3])
     ax9 = fig.add_subplot(gs[2, 3])
 
-
-    # ax4 = fig.add_subplot(gs[1, 2])
-    # ax5 = fig.add_subplot(gs[2, 2])
-
     # -- tess phase curve ------------------------------------------------------
 
     suffix = '-{}-{}.npy'.format(cam, ccd)
@@ -638,13 +631,18 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     y = np.load(tess_dir+'lc'+suffix)[ind]
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
     dy = np.ones(y.shape) * 0.1
-    t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+    if bls:
+        t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
+            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+    else:
+        _, _, _, period, ls_power_best, freqs, power = \
+            LS_Astropy(t,y,dy,pmax=pmax)        
     prefix1 = 'TESS_'+prefix+'_'
     per = period
     vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
              ticid=ticid)
-    folded_t, folded_y, folded_dy = vet_plot(t, y, freqs, power, q, phi0)
+    y, _ = normalize_lc(y)
+    folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins)
     plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period,
                      ylabel="TESS Relative Flux")
 
@@ -657,29 +655,28 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
              power[max(0,centr-3000):centr+3000], '.k', ms=1)
     ax7.set_xlabel('Frequency [1/days]')
 
-    if ls:
-        ax4.set_ylabel('TESS LS Power') 
-        ax7.set_ylabel('TESS LS Power')
-    else:
+    if bls:
         ax4.set_ylabel('TESS BLS Power')        
         ax7.set_ylabel('TESS BLS Power')
-
-    # folded_t, folded_y, folded_dy = vet_plot(t, y, per, bins=bins)
-    # plot_phase_curve(ax0, folded_t, folded_y, folded_dy, per,
-    #                  ylabel="TESS Relative Flux")
-
+    else:
+        ax4.set_ylabel('TESS LS Power') 
+        ax7.set_ylabel('TESS LS Power')
+        
     # -- atlas phase curve ------------------------------------------------------
 
-    # fname_atlas = get_atlas_lc(ticid, wd_tab, atlas_dir)
     if type(fname_atlas) == type(""):
         t, y, dy = load_atlas_lc(fname_atlas)
-        t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        if bls:
+            t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
+                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        else:
+            _, _, _, period, ls_power_best, freqs, power = \
+                LS_Astropy(t,y,dy,pmax=pmax)        
+            
         prefix1 = 'ATLAS_'+prefix+'_'
         vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
                  ticid=ticid, dy=dy)
-        folded_t, folded_y, folded_dy = vet_plot(t, y, freqs, power, q, phi0,
-                                                 dy=dy)
+        folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period,
                          ylabel="ATLAS Relative Flux")
 
@@ -691,27 +688,28 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         ax8.set_xlabel('Frequency [1/days]')
         ax8.set_xlim(ax7.get_xlim())
 
-        if ls:
-            ax5.set_ylabel('ATLAS LS Power') 
-            ax8.set_ylabel('ATLAS LS Power')
-        else:
+        if bls:
             ax5.set_ylabel('ATLAS BLS Power')        
             ax8.set_ylabel('ATLAS BLS Power')
-
-
+        else:
+            ax5.set_ylabel('ATLAS LS Power') 
+            ax8.set_ylabel('ATLAS LS Power')            
 
     # -- ztf phase curve ------------------------------------------------------
 
     # fnames = get_ztf_lc(ra, dec)
     if len(fnames_ztf) > 0:
-        t, y, dy = load_ztf_lc(fnames_ztf)    
-        t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        t, y, dy = load_ztf_lc(fnames_ztf)
+        if bls:
+            t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
+                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+        else:
+            _, _, _, period, ls_power_best, freqs, power = \
+                LS_Astropy(t,y,dy,pmax=pmax)                    
         prefix1 = 'ZTF_'+prefix+'_'
         vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
                  ticid=ticid, dy=dy)
-        folded_t, folded_y, folded_dy = vet_plot(t, y, freqs, power, q, phi0,
-                                                 dy=dy)
+        folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
         plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period,
                          ylabel="ZTF Relative Flux")
 
@@ -723,12 +721,12 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         ax9.set_xlabel('Frequency [1/days]')
         ax9.set_xlim(ax7.get_xlim())
 
-        if ls:
-            ax6.set_ylabel('ZTF LS Power') 
-            ax9.set_ylabel('ZTF LS Power')
-        else:
+        if bls:
             ax6.set_ylabel('ZTF BLS Power')        
             ax9.set_ylabel('ZTF BLS Power')
+        else:
+            ax6.set_ylabel('ZTF LS Power') 
+            ax9.set_ylabel('ZTF LS Power')            
 
     # -- hr diagram ------------------------------------------------------------
 
@@ -739,5 +737,3 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     print('Saved '+out_dir+prefix+'_panel.png')
     plt.close()
 
-
-    
