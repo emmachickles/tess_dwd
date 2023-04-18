@@ -87,27 +87,31 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,remove=True):
         f_best = freqs[i_best]
         period=1.0/f_best
 
-        import time
+        # import time
         # start = time.time()
-        # # >> get best duration, epoch
-        # durations = np.geomspace(qmin, qmax, 100)*period * u.day
-        # model = BoxLeastSquares(t*u.day, y)
-        # periodogram = model.power(np.array([period])*u.day, durations)
-        # max_power = np.argmax(periodogram.power)
-        # q_best = periodogram.duration[max_power].value /period
-        # phi0_best = (periodogram.transit_time[max_power].value - np.min(t)) / period
+        # >> get best duration, epoch
+        durations = np.geomspace(qmin, qmax, 100)*period * u.day
+        model = BoxLeastSquares(t*u.day, y)
+        periodogram = model.power(np.array([period])*u.day, durations)
+        max_power = np.argmax(periodogram.power)
+        q_best = periodogram.duration[max_power].value /period
+        # returns mid-transit time
+        phi0_best = (periodogram.transit_time[max_power].value % period) / period
+        # instead return beginning of transit
+        phi0_best = phi0_best - q_best/2
+        
         # end = time.time()
         # print(end-start)
         # print(q_best, phi0_best)
 
-        start = time.time()
-        sol_power, sols = bls.eebls_gpu(t, y, dy, np.array([f_best]),
-                                       **search_params)
-        sols = np.array(sols)
-        q_best, phi0_best = sols[np.argmax(sol_power)]
-        end = time.time()
-        print(end-start)
-        print(q_best, phi0_best)
+        # start = time.time()
+        # sol_power, sols = bls.eebls_gpu(t, y, dy, np.array([f_best]),
+        #                                **search_params)
+        # sols = np.array(sols)
+        # q_best, phi0_best = sols[np.argmax(sol_power)]
+        # end = time.time()
+        # print(end-start)
+        # print(q_best, phi0_best)
         # import pdb
         # pdb.set_trace()
 

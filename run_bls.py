@@ -99,7 +99,8 @@ for i in range(len(flux)):
 
         # !! save_npy
         lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                     ticid=ticid[i], suffix=suffix, bins=100, save_npy=False)
+                     objid=ticid[i], objid_type="TICID ",
+                     suffix=suffix, bins=100, save_npy=False)
 
         # -- compute LS ----------------------------------------------------
 

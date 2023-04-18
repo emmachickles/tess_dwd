@@ -24,11 +24,6 @@ from astropy.coordinates import SkyCoord
 # Kevin\'s\ UCBs\ -\ UCBs.csv
 # from KBB_Utils.KBB_Utils import LC_Tools
 import LC_Tools
-
-if len(sys.argv) > 1:
-    cam = sys.argv[1]
-    ccd = sys.argv[2]
-
     
 def run_lc_extraction(data_dir, out_dir, wd_cat, cam=None, ccd=None, mult_output=False,
                       tica=False):
@@ -144,6 +139,23 @@ def download_ccd(curl_file, data_dir, cam, ccd):
                 line = ' '.join(line)
                 os.system(line)
 
+def check_download(data_dir, cam, ccd):
+    import subprocess
+    ccd_dir = data_dir+'cam{}-ccd{}/'.format(cam, ccd)
+    fnames = os.listdir(ccd_dir)
+    fnames = np.array(fnames)
+    sizes = []
+    for i in range(len(fnames)):
+        sizes.append(os.path.getsize(ccd_dir+fnames[i]))
+    sizes = np.array(sizes)
+    sbin, cnts = np.unique(sizes, return_counts=True)
+    for i in range(len(sbin)):
+        if sbin[i] < np.max(sizes) and cnts[i] < 0.1*len(fnames):
+            inds = np.nonzero(sizes == sbin[i])
+            for j in range(len(fnames[inds])):
+                os.system('curl -C - -L -o '+ccd_dir+fnames[inds][j]+' https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:TESS/product/'+str(fnames[inds][j]))
+    os.system('ls -lS {} | tail '.format(ccd_dir))
+                
 def source_list(f,catalog,ticid, tica=False):
 
     hdu_list = fits.open(f)
@@ -353,42 +365,36 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     co = np.array([ra, dec]).T
     np.save(out_dir+'co'+suffix+'.npy', co)        
 
-# -- RUN SETTINGS --------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-data_dir = '/home/echickle/data/s0056/s0056/'
-curl_file = data_dir + 'tesscurl_sector_56_ffic.sh'
-cam, ccd = 4, 3
-# download_ccd(curl_file, data_dir, cam, ccd)
-
-# -- light curve extraction ----------------------------------------------------
-
-# wd_cat    = '/data/submit/echickle/WDs.txt'
-# data_dir  = '/data/submit/tess/echickle/s0061/'
-# out_dir   = '/data/submit/tess/echickle/s0061-lc/'
-# curl_file = '/data/submit/echickle/data/tesscurl_sector_41_ffic.sh'
-
-# >> on submit
-# if len(sys.argv) >= 4:
-#     cam = sys.argv[1]
-#     ccd = sys.argv[2]
-
-# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# >> file paths
 wd_cat    = '/home/echickle/data/WDs.txt'
-data_dir = '/home/echickle/data/s0063/s0063/'
-out_dir = '/home/echickle/data/s0063/s0063-lc/'
+data_dir  = '/home/echickle/data/s0058/s0058/'
+out_dir   = '/home/echickle/data/s0058/s0058-lc/'
+curl_file = data_dir + 'tesscurl_sector_58_ffic.sh'
 
 # >> light curve parameters
 N_ap  = 0.7
 N_in  = 1.5
 N_out = 2
 mult_output = False # >> produce multiple light curves per source
-tica = True
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
-cam, ccd = 1, 2
-run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                 mult_output=mult_output, tica=tica)
+if len(sys.argv) > 1:
+    cam = sys.argv[1]
+    ccd = sys.argv[2]
+
+# -- RUN SETTINGS --------------------------------------------------------------
+    
+tica = False
+cam, ccd = 4, 4
+    
+download_ccd(curl_file, data_dir, cam, ccd)
+# check_download(data_dir, cam, ccd)
+# run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+#                  mult_output=mult_output, tica=tica)
+
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # -- target run ----------------------------------------------------------------
