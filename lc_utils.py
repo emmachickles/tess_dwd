@@ -344,11 +344,21 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     if not bls:
         fit, fitfunc = calc_sine_fit(t, y, period)
         
+    # -- calculate companion radius --------------------------------------------
+    if bls:
+        # >> semi-major axis in km, from Kepler's third law
+        a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
+
+        dur = q*period*1440 # >> duration in minutes
+        vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
+        rp = vel*dur*60/2 # >> radius in km
+        rp = rp / 6370 # >> radius in Earth radii
+
     # == bin ===================================================================
     folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
     
     # print('Fold light curve done!')
-    if output_dir and snr > plot_threshold: # == make plot =====================
+    if snr > plot_threshold: # == make plot ====================================
 
         # -- initialize figure -------------------------------------------------
         fig = plt.figure(figsize=(8, 10), constrained_layout=True)
@@ -362,16 +372,6 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax3_R = fig.add_subplot(gs[3, 1])
         else:
             ax3 = fig.add_subplot(gs[3, :])
-
-        # -- calculate companion radius ----------------------------------------
-        if bls:
-            # >> semi-major axis in km, from Kepler's third law
-            a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
-
-            dur = q*period*1440 # >> duration in minutes
-            vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
-            rp = vel*dur*60/2 # >> radius in km
-            rp = rp / 6370 # >> radius in Earth radii
 
         # -- title -------------------------------------------------------------
         if bls:
@@ -610,7 +610,7 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         per = float(fname_tess[7]) / 1440        
         ra = float(fname_tess[19])
         dec = float(fname_tess[21])    
-        prefix = '_'.join(fname_tess[:22])
+        suffix = '_'.join(fname_tess[12:22])
     else:
         ticid = int(fname_tess[4][3:])
         cam = fname_tess[6]
@@ -618,7 +618,7 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         per = float(fname_tess[3]) / 1440        
         ra = float(fname_tess[10])
         dec = float(fname_tess[12])    
-        prefix = '_'.join(fname_tess[:13])        
+        suffix = '_'.join(fname_tess[4:13])        
         
     fig = plt.figure(figsize=(16,6), constrained_layout=True)
     gs = fig.add_gridspec(nrows=3, ncols=4)
@@ -635,11 +635,11 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
 
     # -- tess phase curve ------------------------------------------------------
 
-    suffix = '-{}-{}.npy'.format(cam, ccd)
-    t = np.load(tess_dir+'ts'+suffix)
-    ticid_list = np.load(tess_dir+'id'+suffix)
+    f_suffix = '-{}-{}.npy'.format(cam, ccd)
+    t = np.load(tess_dir+'ts'+f_suffix)
+    ticid_list = np.load(tess_dir+'id'+f_suffix)
     ind = np.nonzero(ticid_list == ticid)[0][0]
-    y = np.load(tess_dir+'lc'+suffix)[ind]
+    y = np.load(tess_dir+'lc'+f_suffix)[ind]
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
     dy = np.ones(y.shape) * 0.1
     if bls:
@@ -648,10 +648,11 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     else:
         _, _, _, period, ls_power_best, freqs, power = \
             LS_Astropy(t,y,dy,pmax=pmax)        
-    prefix1 = 'TESS_'+prefix+'_'
+    # prefix1 = 'TESS_'+prefix+'_'
+    prefix1 = 'TESS_'
     per = period
     vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-             ticid=ticid)
+             objid=ticid, plot_threshold=0, suffix='_'+suffix)
     y, _ = normalize_lc(y)
     folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins)
     plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period,
@@ -676,17 +677,17 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     # -- atlas phase curve ------------------------------------------------------
 
     if type(fname_atlas) == type(""):
-        t, y, dy = load_atlas_lc(fname_atlas)
+        t, y, dy, _, _ = load_atlas_lc(fname_atlas)
         if bls:
             t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+                BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
         else:
             _, _, _, period, ls_power_best, freqs, power = \
-                LS_Astropy(t,y,dy,pmax=pmax)        
+                LS_Astropy(t,y,dy,pmax=10)        
             
-        prefix1 = 'ATLAS_'+prefix+'_'
+        prefix1 = 'ATLAS_'
         vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                 ticid=ticid, dy=dy)
+                 objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
         folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period,
                          ylabel="ATLAS Relative Flux")
@@ -713,13 +714,13 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
         t, y, dy = load_ztf_lc(fnames_ztf)
         if bls:
             t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-                BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+                BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
         else:
             _, _, _, period, ls_power_best, freqs, power = \
                 LS_Astropy(t,y,dy,pmax=pmax)                    
-        prefix1 = 'ZTF_'+prefix+'_'
+        prefix1 = 'ZTF_'
         vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                 ticid=ticid, dy=dy)
+                 objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
         folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
         plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period,
                          ylabel="ZTF Relative Flux")
@@ -744,7 +745,7 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     hr_diagram(gaia_tab, ra, dec, ax3)
     
     fig.tight_layout()
-    plt.savefig(out_dir+prefix+'_panel.png', dpi=300)
-    print('Saved '+out_dir+prefix+'_panel.png')
+    plt.savefig(out_dir+suffix+'_panel.png', dpi=300)
+    print('Saved '+out_dir+suffix+'_panel.png')
     plt.close()
 

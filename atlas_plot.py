@@ -2,15 +2,15 @@
 
 lc_dir = "/scratch/echickle/grnd_lc/"
 
-lc_f = lc_dir + "s0061-cam3-hsnr.txt" # !!
-sector, cam = 61, 3 # !!
+lc_f = lc_dir + "s0062-cam4-hsnr.txt" # !!
+sector, cam = 62, 4 # !!
 
 out_dir = "/scratch/echickle/s%04d/"%sector \
           +"s%04d-"%sector+str(cam)+"-crossmatch/"
 tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 
 gaia_tab = "/scratch/echickle/100pc_clean.fits"
-ls = False
+bls=True
 
 # ------------------------------------------------------------------------------
 
@@ -54,4 +54,4 @@ for i in range(len(ticid)):
         fnames_ztf[j] = lc_dir+fnames_ztf[j]
 
     lcu.make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,
-                        out_dir,ls=ls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)
+                        out_dir,bls=bls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)
