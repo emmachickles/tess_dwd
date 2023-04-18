@@ -51,7 +51,7 @@ def load_atlas_lc(f, n_std=2):
     ra, dec = np.mean(coords[:,0]), np.mean(coords[:,1])
     t = BJDConvert(t,ra,dec, date_format='mjd').value    
 
-    return t, y, dy
+    return t, y, dy, ra, dec
 
 def get_atlas_lc(ticid, wd_tab, atlas_dir):
     import pandas as pd
@@ -244,11 +244,13 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=
     
 
 def calc_snr(t, y, period, q, phi0):
-    t = t - np.mean(t) 
+    t_mean = np.mean(t)
+    t = t - t_mean
 
     # >> get epoch (center of first eclipse in time series)
     epo = (phi0 + 0.5 * q) * period
     epo += period + int((np.min(t) - epo) / period)*period
+    epo_TJD = epo + t_mean
 
     # -- phase fold ------------------------------------------------------------
     phi= np.mod(t - epo, period) / period # >> phase
@@ -276,11 +278,10 @@ def calc_snr(t, y, period, q, phi0):
     err = np.sqrt(err_out**2 + err_in**2)
     snr = delta/err
 
-    return snr, phi, transit, near_transit
+    return snr, phi, transit, near_transit, epo_TJD
 
 def calc_peak_stats(freqs, power, nearpeak=3000):
     peak = np.argmax(power)
-    
     # -- significance of peak ----------------------------------------------
     sig=(np.max(power)-np.median(power))/(np.std(power))
 
@@ -314,9 +315,9 @@ def calc_sine_fit(t, y, period):
     err = np.mean( ( fitfunc - y ) ** 2)
     return err, fitfunc
     
-def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None,
-             suffix='', ticid=None, bins=100, bls=True, save_npy=False,
-             nearpeak=3000):
+def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
+             objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
+             plot_threshold=10):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
     * phi0 : start of eclipse phase
@@ -346,140 +347,146 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None,
     # == bin ===================================================================
     folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
     
-    # == make plot =============================================================
+    # print('Fold light curve done!')
+    if output_dir and snr > plot_threshold: # == make plot =====================
 
-    # -- initialize figure -----------------------------------------------------
-    fig = plt.figure(figsize=(8, 10), constrained_layout=True)
-    gs = fig.add_gridspec(nrows=4, ncols=2)
-    ax0_L = fig.add_subplot(gs[0, 0])
-    ax0_R = fig.add_subplot(gs[0, 1])
-    ax1 = fig.add_subplot(gs[1, :])
-    ax2 = fig.add_subplot(gs[2, :])    
-    if bls:
-        ax3_L = fig.add_subplot(gs[3, 0])
-        ax3_R = fig.add_subplot(gs[3, 1])
-    else:
-        ax3 = fig.add_subplot(gs[3, :])
-
-    # -- calculate companion radius --------------------------------------------
-    if bls:
-        # >> semi-major axis in km, from Kepler's third law
-        a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
-
-        dur = q*period*1440 # >> duration in minutes
-        vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
-        rp = vel*dur*60/2 # >> radius in km
-        rp = rp / 6370 # >> radius in Earth radii
-
-    # -- title -----------------------------------------------------------------
-    if ticid is not None:
-        # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
+        # -- initialize figure -------------------------------------------------
+        fig = plt.figure(figsize=(8, 10), constrained_layout=True)
+        gs = fig.add_gridspec(nrows=4, ncols=2)
+        ax0_L = fig.add_subplot(gs[0, 0])
+        ax0_R = fig.add_subplot(gs[0, 1])
+        ax1 = fig.add_subplot(gs[1, :])
+        ax2 = fig.add_subplot(gs[2, :])    
         if bls:
-            fig.suptitle('TIC '+str(ticid)+', period: '+\
-                          str(round(period*1440,2))+' min, duration: '+\
-                          str(round(dur,2))+' mins, snr: '+\
-                          str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
-                         ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
+            ax3_L = fig.add_subplot(gs[3, 0])
+            ax3_R = fig.add_subplot(gs[3, 1])
         else:
-            fig.suptitle('TIC '+str(ticid)+', period: , '+\
-                         str(round(period*1440,2))+' min, mse: '+\
-                         str(round(fit,5)))
-    else:
-        # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
-        fig.suptitle('period: '+str(round(period*1440,2))+' min')
+            ax3 = fig.add_subplot(gs[3, :])
 
-    # --------------------------------------------------------------------------
-    ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5)
-    ax0_L.set_xlabel('Frequency [1/days]')
+        # -- calculate companion radius ----------------------------------------
+        if bls:
+            # >> semi-major axis in km, from Kepler's third law
+            a = (0.6 * (period / 365.25)**2)**(1/3) * 1.496e8
 
-    # >> threshold power (50% of peak)
-    ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
-               power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-    ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
-               power[peak-wid//2:peak+wid//2], '.r', ms=1)
-    ax0_R.set_xlabel('Frequency [1/days]') 
+            dur = q*period*1440 # >> duration in minutes
+            vel = 2*np.pi*a / (period * 86400) # >> velocity in km/s
+            rp = vel*dur*60/2 # >> radius in km
+            rp = rp / 6370 # >> radius in Earth radii
 
-    ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-    ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
-    ax1.set_xlabel('Period [minutes]')
+        # -- title -------------------------------------------------------------
+        if bls:
+            suptext ='period: '+str(round(period*1440,2))+' min\nduration: '+\
+                      str(round(dur,2))+' mins, epo: '+\
+                      str(round(epo,5))+' TJD, snr: '+\
+                      str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
+                      ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$'
+        else:
+            suptext='period: '+str(round(period*1440,2))+' min'            
+        if objid is not None:
+            suptext = objid_type+' '+str(objid)+', ' + suptext
+        fig.suptitle(suptext)
 
+        # -- plot periodogram --------------------------------------------------
+        if len(freqs) < 1e6:
+            ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            ax0_L.set_xlabel('Frequency [1/days]')
+
+        # >> threshold power (50% of peak)
+        ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+                   power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+        ax0_R.plot(freqs[thr_L:thr_R], power[thr_L:thr_R], '.r', ms=1)
+        ax0_R.set_xlabel('Frequency [1/days]')
+
+        if len(freqs) < 1e6:
+            ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
+            ax1.set_xlabel('Period [minutes]')
+
+        if bls:
+            ax0_L.set_ylabel('BLS Power')        
+            ax1.set_ylabel('BLS Power')
+        else:
+            ax0_L.set_ylabel('LS Power')        
+            ax1.set_ylabel('LS Power')
+
+        # -- plot phase curve --------------------------------------------------
+
+
+        folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
+        shift = np.max(folded_t) - np.min(folded_t)        
+        if type(bins) != type(None):
+            ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
+                           fmt='.k', ms=1, elinewidth=1)
+            ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+                           fmt='.k', ms=1, elinewidth=1)
+
+        else:
+            ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
+            ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
+        ax2.set_xlabel('Time [minutes]')
+        ax2.set_ylabel('Relative Flux')
+
+        # -- plot full light curve ---------------------------------------------
+        if bls:
+            ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
+            ax3_L.set_xlabel('Time [TJD]')
+            ax3_L.set_ylabel('Relative Flux')
+
+            
+            # >> plot phase curve zoomed in on transit 
+            ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+            ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
+            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=1)
+            w = max(1, int(0.1*np.count_nonzero(near_transit)))
+            inds = np.argsort(phi[near_transit])
+            if np.count_nonzero(near_transit) > 0:
+                phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
+                yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
+                ax3_R.plot(phiconv*period*1440, yconv, '-')
+                ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
+
+            ax3_R.set_xlabel('Time [minutes]')
+            ax3_R.set_ylabel('Relative Flux')
+        else:
+            ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
+            ax3.set_xlabel('Time [TJD]')
+            ax3.set_ylabel('Relative Flux')
+
+        # -- save figure -------------------------------------------------------
+        fig.tight_layout()
+
+        if bls:
+            prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
+                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+\
+                     str(round(q,5))+\
+                     '_phi0_'+str(round(phi0,5))
+        else:
+            prefix = 'pow_'+str(round(sig, 2))+'_wid_'+str(wid)+'_per_'+\
+                     str(round(period*1440,8))
+
+        if bls:
+            plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=100)
+            print('Saved '+output_dir+prefix+suffix+'_bls.png')
+        else:
+            plt.savefig(output_dir+prefix+suffix+'_ls.png', dpi=300)
+            print('Saved '+output_dir+prefix+suffix+'_ls.png')
+        plt.close()
+
+
+        if save_npy:
+            np.save(output_dir+prefix+'_bls_power.npy',
+                    np.array([freqs[max(0,peak-nearpeak):peak+nearpeak],
+                              power[max(0,peak-nearpeak):peak+nearpeak]]).T )
+            np.save(output_dir+prefix+'_phase_curve.npy',
+                    np.array([folded_y, folded_dy]).T)
+
+    # -- return values ---------------------------------------------------------
     if bls:
-        ax0_L.set_ylabel('BLS Power')        
-        ax1.set_ylabel('BLS Power')
+        return sig, snr, wid, period, period*1440, q, phi0, dur, epo
     else:
-        ax0_L.set_ylabel('LS Power')        
-        ax1.set_ylabel('LS Power')
+        return sig, wid, period, period*1440
 
-    folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
-    shift = np.max(folded_t) - np.min(folded_t)
-    if not bls:
-        ax2.plot(t%period*1440, fitfunc, '.r')
-        ax2.plot((t%period + shift)*1440, fitfunc, '.r')
-    if bins is not None:
-        ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
-                       fmt='.k', ms=1, elinewidth=1)
-        ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
-                       fmt='.k', ms=1, elinewidth=1)
-
-    else:
-        ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
-        ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-    ax2.set_xlabel('Time [minutes]')
-    ax2.set_ylabel('Relative Flux')
-
-    if bls:
-        ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
-        ax3_L.set_xlabel('Time [TJD]')
-        ax3_L.set_ylabel('Relative Flux')
-
-
-        # tran_len = np.count_nonzero(near_transit)
-        ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-        ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-        ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
-        w = max(1, int(0.1*np.count_nonzero(near_transit)))
-        inds = np.argsort(phi[near_transit])
-        if np.count_nonzero(near_transit) > 0:
-            phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
-            yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
-            ax3_R.plot(phiconv*period*1440, yconv, '-')
-            ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
-
-        ax3_R.set_xlabel('Time [minutes]')
-        ax3_R.set_ylabel('Relative Flux')
-    else:
-        ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
-        ax3.set_xlabel('Time [TJD]')
-        ax3.set_ylabel('Relative Flux')
-
-    fig.tight_layout()
-
-    if bls:
-        prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
-                 str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+str(q)+\
-                 '_phi0_'+str(phi0)
-    else:
-        prefix = 'pow_'+str(round(sig, 2))+'_mse_'+str(round(fit,3))+'_wid_'+\
-            str(wid)+'_per_'+str(round(period*1440,8))
-
-    # if prefix.split('_')[0] != "ATLAS" and prefix.split('_')[0] != "ZTF"\
-    # and prefix.split('_')[0] != "TESS":
-    #     prefix = 'wid_'+str(thr_R - thr_L)+'_'+ prefix
-    if bls:
-        plt.savefig(output_dir+prefix+suffix+'_bls.png', dpi=300)
-        print('Saved '+output_dir+prefix+suffix+'_bls.png')
-    else:
-        plt.savefig(output_dir+prefix+suffix+'_ls.png', dpi=300)
-        print('Saved '+output_dir+prefix+suffix+'_ls.png')
-    plt.close()
-
-    if save_npy:
-        np.save(output_dir+prefix+'_bls_power.npy',
-                np.array([freqs[max(0,peak-nearpeak):peak+nearpeak],
-                          power[max(0,peak-nearpeak):peak+nearpeak]]).T )
-        np.save(output_dir+prefix+'_phase_curve.npy',
-                np.array([folded_y, folded_dy]).T)
-    
+            
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period,
                      ylabel="Relative Flux"):
     shift = np.max(folded_t) - np.min(folded_t)    
@@ -550,12 +557,15 @@ def hr_diagram(gaia_tab, ra, dec, ax):
     
     hdul = fits.open(gaia_tab)
     gid = hdul[1].data['source_id']
-    gmag = hdul[1].data['phot_g_mean_mag']
     bp_rp = hdul[1].data['bp_rp']
+
+    parallax = hdul[1].data['parallax']
+    gmag = hdul[1].data['phot_g_mean_mag']
+    abs_mag = gmag+5*(np.log10(parallax)-2)
     
-    ax.plot(bp_rp, gmag, '.k', alpha=0.2, ms=0.05)
+    ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
     ax.set_xlim([-0.6, 5])
-    ax.set_ylim([21, 3.3])
+    ax.set_ylim([17.5, 0])
     ax.set_xlabel('Gaia BP-RP')
     ax.set_ylabel('Absolute Magnitude (Gaia G)')
 
@@ -571,8 +581,8 @@ def hr_diagram(gaia_tab, ra, dec, ax):
         parallax = j.get_results()['parallax'][0]
         if str(parallax) == '--':
             abs_mag = None
-            ax.text(0.95, 0.05, "bp_rp: "+str(round(bprp_targ,2))+\
-                    "\ng_mean_mag: "+str(round(apparent_mag, 2))+\
+            ax.text(0.95, 0.05, "bp_rp: "+str(bprp_targ)+\
+                    "\ng_mean_mag: "+str(apparent_mag)+\
                     "\nparallax: "+str(parallax),
                     horizontalalignment="right", transform=ax.transAxes)
         else:

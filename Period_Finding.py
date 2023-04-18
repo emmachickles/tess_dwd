@@ -29,17 +29,18 @@ def remove_harmonics(freqs, power, dur=None, epo=None):
         else: 
                 return freqs, power
         
-def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
+def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,remove=True):
         import cuvarbase.bls as bls
-
+        from astropy.timeseries import BoxLeastSquares
+        import astropy.units as u
+        
         tmean = np.mean(t)
         t=t-tmean
 
         # set up search parameters
         search_params = dict(qmin=qmin, qmax=qmax,
                      # The logarithmic spacing of q
-                            # dlogq=0.1,
-                            dlogq=0.1,
+                            dlogq=dlogq,
 
                      # Number of overlapping phase bins
                      # to use for finding the best phi0
@@ -59,12 +60,9 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
 
         nf = int(np.ceil((fmax - fmin) / df))
         freqs = fmin + df * np.arange(nf)
-        
-        # bls_power = bls.eebls_gpu_fast(t, y, dy, freqs,
-        #                                **search_params)
-        bls_power, sols = bls.eebls_gpu(t, y, dy, freqs,
+
+        bls_power = bls.eebls_gpu_fast(t, y, dy, freqs,
                                        **search_params)
-        sols = np.array(sols)
         
         if remove:
                 freqs_to_remove = []
@@ -83,13 +81,39 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,remove=True):
                         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
                         freqs = freqs[idx]
                         bls_power = bls_power[idx]
-                        sols = sols[idx]
 
         i_best = np.argmax(bls_power)
         bls_power_best = bls_power[i_best]
         f_best = freqs[i_best]
         period=1.0/f_best
-        q_best, phi0_best = sols[i_best]   
+
+        # import time
+        # start = time.time()
+        # >> get best duration, epoch
+        durations = np.geomspace(qmin, qmax, 100)*period * u.day
+        model = BoxLeastSquares(t*u.day, y)
+        periodogram = model.power(np.array([period])*u.day, durations)
+        max_power = np.argmax(periodogram.power)
+        q_best = periodogram.duration[max_power].value /period
+        # returns mid-transit time
+        phi0_best = (periodogram.transit_time[max_power].value % period) / period
+        # instead return beginning of transit
+        phi0_best = phi0_best - q_best/2
+        
+        # end = time.time()
+        # print(end-start)
+        # print(q_best, phi0_best)
+
+        # start = time.time()
+        # sol_power, sols = bls.eebls_gpu(t, y, dy, np.array([f_best]),
+        #                                **search_params)
+        # sols = np.array(sols)
+        # q_best, phi0_best = sols[np.argmax(sol_power)]
+        # end = time.time()
+        # print(end-start)
+        # print(q_best, phi0_best)
+        # import pdb
+        # pdb.set_trace()
 
         # >> finding second peak        
         # freqs_to_remove = [[f_best-0.1*f_best, f_best+0.1*f_best]]

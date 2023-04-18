@@ -1,57 +1,61 @@
-# -- inputs --------------------------------------------------------------------
+# -- inputs -------------------------------------------------------------------
 
-pmin = 410 / 60 
-pmax = 0.13 
+pmin = 2 # minutes
+pmax = 10 # days 
 qmin = 0.01
 qmax = 0.15
+dlogq = 0.1
 
-data_dir = "/nobackup1c/users/echickle/ATLAS/"
-output_dir = "/nobackup1c/users/echickle/out/"
-bls_dir    = output_dir + 'bls'
-ls_dir     = output_dir + 'ls'
+# data_dir = "/home/echickle/ATLAS_TEST/"
+data_dir = "/matchfiles/data2/ATLAS/"
+output_dir = "/home/echickle/out/"
 
-fnames = ['1821925406145803136', '4590026743168925952', '6015541335204372864', '2674459092793700736', '6203449070679085312', '6448964626977687168', '6077174596944106752', '3946393595708149888', '5388880416727504640', '6884555017522418688', '4493071773470153088', '6673895637682011008', '1261495322912293248', '6806227939462649728', '4651860906336301696', '145831353928524672', '4405206054089274496', '5432401011098810368', '4906058133388497152', '5076475907343058304']
+# data_dir = "/pool001/echickle/ATLAS/"
+# output_dir = "/nobackup1c/users/echickle/out/"
+bls_dir    = output_dir + 'bls/'
 
-# ------------------------------------------------------------------------------
+def run_process(f):
+    import lc_utils as lcu
+    from Period_Finding import BLS
+    import matplotlib as mpl
+    mpl.use('Agg')
+    # import time
 
-import numpy as np
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
+    print('Starting '+f)
+    
+    t, y, dy, ra, dec = lcu.load_atlas_lc(f)
+    print('Loaded '+f)
 
-from Period_Finding import BLS, LS_Astropy
-import lc_utils as lcu
-
-import sys
-import os
-
-# ------------------------------------------------------------------------------
-
-os.makedirs(output_dir, exist_ok=True)
-os.makedirs(bls_dir, exist_ok=True)
-os.makedirs(ls_dir, exist_ok=True)
-
-# ------------------------------------------------------------------------------
-
-for i in range(len(fnames)):
-    if i % 50 == 0:
-        print(str(i)+" / "+str(len(fnames)))
-
-    t, y, dy = load_atlas_lc(data_dir + fnames[i])
-
-    # -- compute BLS ----------------------------------------------------    
+    # start =time.time()
     t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
-    prefix1 = 'ATLAS_'+prefix+'_'
-    vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir+prefix1,
-             ticid=ticid, dy=dy)
+        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,dlogq=dlogq,remove=False)
+    # end=time.time()
+    print('Computed BLS '+f)        
+    # print(end-start)
+    gaiaid = f.split('/')[-1]
+    suffix = '_GID_'+gaiaid+'_ra_{}_dec_{}_'.format(ra, dec)    
 
+    # start = time.time()
+    res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir, dy=dy,
+                       suffix=suffix, objid=gaiaid, objid_type='GAIAID')
+    # end=time.time()
+    print('Postprocessed light curves')
+    # print(end-start)
+    
+    sig, snr, wid, period, period_min, q, phi0, dur, epo = res
 
-    # -- compute LS ----------------------------------------------------
+    return int(gaiaid), sig, snr, wid, period, period_min, q, phi0, dur epo
+    
 
-    _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
-        LS_Astropy(t,y,dy,pmax=pmax)
+if __name__ == '__main__':
 
-    lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir+prefix1,
-                 bins=100, save_npy=False, bls=False)
+    import sys
+    fname = sys.argv[1]
 
+    import os
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(bls_dir, exist_ok=True)
+
+    # --------------------------------------------------------------------------
+
+    run_process(data_dir + fname)
