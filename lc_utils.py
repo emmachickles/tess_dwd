@@ -1,4 +1,4 @@
- import numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
@@ -255,11 +255,13 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, diag=False, tici
     
 
 def calc_snr(t, y, period, q, phi0):
-    t = t - np.mean(t) 
+    t_mean = np.mean(t)
+    t = t - t_mean
 
     # >> get epoch (center of first eclipse in time series)
     epo = (phi0 + 0.5 * q) * period
     epo += period + int((np.min(t) - epo) / period)*period
+    epo_TJD = epo + t_mean
 
     # -- phase fold ------------------------------------------------------------
     phi= np.mod(t - epo, period) / period # >> phase
@@ -287,7 +289,7 @@ def calc_snr(t, y, period, q, phi0):
     err = np.sqrt(err_out**2 + err_in**2)
     snr = delta/err
 
-    return snr, phi, transit, near_transit
+    return snr, phi, transit, near_transit, epo_TJD
 
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
@@ -323,7 +325,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
     # -- calculate SNR ---------------------------------------------------------
     if bls:
-        snr, phi, transit, near_transit = calc_snr(t, y, period, q, phi0)
+        snr, phi, transit, near_transit, epo = calc_snr(t, y, period, q, phi0)
     
     # -- significance of peak ----------------------------------------------
     sig=(np.max(power)-np.median(power))/(np.std(power))
@@ -365,11 +367,11 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         if bls:
             ax3_L = fig.add_subplot(gs[3, 0])
             ax3_R = fig.add_subplot(gs[3, 1])
-            ax3_L.set_rasterized(True)
-            ax3_R.set_rasterized(True)
+            # ax3_L.set_rasterized(True)
+            # ax3_R.set_rasterized(True)
         else:
             ax3 = fig.add_subplot(gs[3, :])
-            ax3.set_rasterized(True)
+            # ax3.set_rasterized(True)
 
         # print('Figure initialized!')
         # -- calculate companion radius ----------------------------------------
@@ -382,21 +384,19 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             rp = vel*dur*60/2 # >> radius in km
             rp = rp / 6370 # >> radius in Earth radii
             # print('Calculated companion radius!')
+            
         # -- title -------------------------------------------------------------
-        if objid is not None:
-            # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
-            if bls:
-                fig.suptitle(objid_type+' '+str(objid)+', period: '+\
-                              str(round(period*1440,2))+' min, duration: '+\
-                              str(round(dur,2))+' mins, snr: '+\
-                              str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
-                             ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
-            else:
-                fig.suptitle(objid_type' '+str(objid)+', period: '+\
-                             str(round(period*1440,2))+' min')
+        if bls:
+            suptext ='period: '+str(round(period*1440,2))+' min\nduration: '+\
+                      str(round(dur,2))+' mins, epo: '+\
+                      str(round(epo,5))+' TJD, snr: '+\
+                      str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
+                      ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$'
         else:
-            # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
-            fig.suptitle('period: '+str(round(period*1440,2))+' min')
+            suptext='period: '+str(round(period*1440,2))+' min'            
+        if objid is not None:
+            suptext = objid_type+' '+str(objid)+', ' + suptext
+        fig.suptitle(suptext)
 
         # ----------------------------------------------------------------------
         if len(freqs) < 1e6:
@@ -449,7 +449,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             # tran_len = np.count_nonzero(near_transit)
             ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
             ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=0.5)
+            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=1)
             w = max(1, int(0.1*np.count_nonzero(near_transit)))
             inds = np.argsort(phi[near_transit])
             if np.count_nonzero(near_transit) > 0:

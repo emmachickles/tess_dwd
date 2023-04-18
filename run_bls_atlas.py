@@ -7,11 +7,11 @@ qmax = 0.15
 dlogq = 0.1
 
 # data_dir = "/home/echickle/ATLAS_TEST/"
-# data_dir = "/matchfiles/data2/ATLAS/"
-# output_dir = "/home/echickle/out/"
+data_dir = "/matchfiles/data2/ATLAS/"
+output_dir = "/home/echickle/out/"
 
-data_dir = "/pool001/echickle/ATLAS/"
-output_dir = "/nobackup1c/users/echickle/out/"
+# data_dir = "/pool001/echickle/ATLAS/"
+# output_dir = "/nobackup1c/users/echickle/out/"
 bls_dir    = output_dir + 'bls/'
 
 def run_process(f):
@@ -37,7 +37,7 @@ def run_process(f):
 
     # start = time.time()
     res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir, dy=dy,
-                       suffix=suffix)
+                       suffix=suffix, objid=gaiaid, objid_type='GAIAID')
     # end=time.time()
     print('Postprocessed light curves')
     # print(end-start)
