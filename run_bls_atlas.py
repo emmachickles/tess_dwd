@@ -23,7 +23,7 @@ def run_process(f):
 
     print('Starting '+f)
     
-    t, y, dy = lcu.load_atlas_lc(f)
+    t, y, dy, ra, dec = lcu.load_atlas_lc(f)
     print('Loaded '+f)
 
     # start =time.time()
@@ -33,10 +33,11 @@ def run_process(f):
     print('Computed BLS '+f)        
     # print(end-start)
     gaiaid = f.split('/')[-1]
-    prefix1 = 'ATLAS_'+gaiaid+'_'
+    suffix = '_GID_'+gaiaid+'_ra_{}_dec_{}_'.format(ra, dec)    
 
     # start = time.time()
-    res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir+prefix1, dy=dy)
+    res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir, dy=dy,
+                       suffix=suffix)
     # end=time.time()
     print('Postprocessed light curves')
     # print(end-start)

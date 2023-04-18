@@ -1,4 +1,4 @@
-import numpy as np
+ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
@@ -51,7 +51,7 @@ def load_atlas_lc(f, n_std=2):
     ra, dec = np.mean(coords[:,0]), np.mean(coords[:,1])
     t = BJDConvert(t,ra,dec, date_format='mjd').value    
 
-    return t, y, dy
+    return t, y, dy, ra, dec
 
 def get_atlas_lc(ticid, wd_tab, atlas_dir):
     import pandas as pd
@@ -290,7 +290,7 @@ def calc_snr(t, y, period, q, phi0):
     return snr, phi, transit, near_transit
 
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             ticid=None, bins=100, bls=True, save_npy=False, nearpeak=3000,
+             objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
              plot_threshold=10):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
@@ -383,16 +383,16 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             rp = rp / 6370 # >> radius in Earth radii
             # print('Calculated companion radius!')
         # -- title -------------------------------------------------------------
-        if type(ticid) != type(None):
+        if objid is not None:
             # ax0_L.set_title('TIC '+str(ticid)+'\nperiod: '+str(round(period*1440,2))+' min')
             if bls:
-                fig.suptitle('TIC '+str(ticid)+', period: '+\
+                fig.suptitle(objid_type+' '+str(objid)+', period: '+\
                               str(round(period*1440,2))+' min, duration: '+\
                               str(round(dur,2))+' mins, snr: '+\
                               str(round(snr, 2))+'\nradius assuming .6 '+r'$M_\odot$'+\
                              ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$')
             else:
-                fig.suptitle('TIC '+str(ticid)+', period: '+\
+                fig.suptitle(objid_type' '+str(objid)+', period: '+\
                              str(round(period*1440,2))+' min')
         else:
             # ax0_L.set_title('period: '+str(round(period*1440,2))+' min')
