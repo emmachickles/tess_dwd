@@ -26,11 +26,17 @@ qmax = 0.15
 # cam    = [1,         1,         2,         1,         1]
 # ccd    = [1,         1,         4,         2,         3]
 
-output_dir = "/scratch/echickle/KB_UCB/" # incomplete! 
-ticid  = [2040677137, 746047312]
-sector = [57,         61]
-cam    = [2,          2]
-ccd    = [3,          4]
+# output_dir = "/scratch/echickle/KB_UCB/" # incomplete! 
+# ticid  = [2040677137, 746047312]
+# sector = [57,         61]
+# cam    = [2,          2]
+# ccd    = [3,          4]
+
+output_dir = "/scratch/echickle/LDSS_230421/"
+ticid  = [767706310, 875850017, 826164830, 193092806, 808364853]
+sector = [61,        62,        62,        62,        62]
+cam    = [3,         1,         2,         2,         3]
+ccd    = [3,         2,         1,         3,         4]
 
 # ------------------------------------------------------------------------------
 
@@ -81,11 +87,12 @@ for i in range(len(ticid)):
     inds = np.argsort(t)
     t, y = t[inds], y[inds]
 
-    # # !!
-    inds = np.nonzero( t> 59870 )
-    t, y = t[inds], y[inds]
+    # # # !!
+    # inds = np.nonzero( t> 59870 )
+    # t, y = t[inds], y[inds]
 
     # -- prep light curve --------------------------------------------------
+    # if i == 1: pdb.set_trace()
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     dy = np.ones(y.shape)*0.1
     
@@ -100,45 +107,46 @@ for i in range(len(ticid)):
              '_ra_{}_dec_{}_'.format(coord[0], coord[1])
 
     lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                 ticid=ticid[i], suffix=suffix, bins=100, save_npy=False)
+                 objid=ticid[i], suffix=suffix, bins=100, save_npy=False,
+                 plot_threshold=0)
 
-    # period = 0.038365738 # TIC 2040677137
-    period = 0.038365738/2 # TIC 2040677137
-    peak = np.argmin(np.abs(freqs - 1/period) )
-    # # peak = np.argmax(power)
-    nearpeak = 3000
-    fig, ax = plt.subplots()
-    ax.axvline(1/period, color='r')
-    ax.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
-               power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-    ax.set_xlabel('Frequency [1/days]') 
-    ax.set_ylabel('BLS Power')
-    fig.savefig(output_dir+'TIC%016d'%ticid[i]+'_zoom_bls.png')
-    print(output_dir+'TIC%016d'%ticid[i]+'_zoom_bls.png')
+    # # period = 0.038365738 # TIC 2040677137
+    # # period = 0.038365738/2 # TIC 2040677137
+    # peak = np.argmin(np.abs(freqs - 1/period) )
+    # # # peak = np.argmax(power)
+    # nearpeak = 3000
+    # fig, ax = plt.subplots()
+    # ax.axvline(1/period, color='r')
+    # ax.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+    #            power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+    # ax.set_xlabel('Frequency [1/days]') 
+    # ax.set_ylabel('BLS Power')
+    # fig.savefig(output_dir+'TIC%016d'%ticid[i]+'_zoom_bls.png')
+    # print(output_dir+'TIC%016d'%ticid[i]+'_zoom_bls.png')
+    # # pdb.set_trace()
+
+    # # -- compute LS ----------------------------------------------------
+    # _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
+    #     LS_Astropy(t,y,dy,pmax=pmax)
+
+    # suffix='_TIC%016d'%ticid[i]+'_s%04d_'%sector[i]+'cam_'+str(cam[i])+'_ccd_'+str(ccd[i])+\
+    #     '_ra_{}_dec_{}_'.format(coord[0], coord[1])                
+
+    # lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir,
+    #              ticid=ticid[i], suffix=suffix, bins=100, save_npy=False,
+    #              bls=False)
+
+    # period = 0.038365738/2 # TIC 2040677137                                      
+    # peak = np.argmin(np.abs(ls_freqs - 1/period) )
+    # # # peak = np.argmax(power)                                                  
+    # nearpeak = 3000
+    # fig, ax = plt.subplots()
+    # ax.axvline(1/period, color='r')
+    # ax.plot(ls_freqs[max(0,peak-nearpeak):peak+nearpeak],
+    #         ls_power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+    # ax.set_xlabel('Frequency [1/days]')
+    # ax.set_ylabel('LS Power')
+    # fig.savefig(output_dir+'TIC%016d'%ticid[i]+'_zoom_ls.png')
+    # print(output_dir+'TIC%016d'%ticid[i]+'_zoom_ls.png')
+
     # pdb.set_trace()
-
-    # -- compute LS ----------------------------------------------------
-    _, _, _, ls_period, ls_power_best, ls_freqs, ls_power = \
-        LS_Astropy(t,y,dy,pmax=pmax)
-
-    suffix='_TIC%016d'%ticid[i]+'_s%04d_'%sector[i]+'cam_'+str(cam[i])+'_ccd_'+str(ccd[i])+\
-        '_ra_{}_dec_{}_'.format(coord[0], coord[1])                
-
-    lcu.vet_plot(t, y, ls_freqs, ls_power,output_dir=ls_dir,
-                 ticid=ticid[i], suffix=suffix, bins=100, save_npy=False,
-                 bls=False)
-
-    period = 0.038365738/2 # TIC 2040677137                                      
-    peak = np.argmin(np.abs(ls_freqs - 1/period) )
-    # # peak = np.argmax(power)                                                  
-    nearpeak = 3000
-    fig, ax = plt.subplots()
-    ax.axvline(1/period, color='r')
-    ax.plot(ls_freqs[max(0,peak-nearpeak):peak+nearpeak],
-            ls_power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-    ax.set_xlabel('Frequency [1/days]')
-    ax.set_ylabel('LS Power')
-    fig.savefig(output_dir+'TIC%016d'%ticid[i]+'_zoom_ls.png')
-    print(output_dir+'TIC%016d'%ticid[i]+'_zoom_ls.png')
-
-    pdb.set_trace()

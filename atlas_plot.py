@@ -2,11 +2,12 @@
 
 lc_dir = "/scratch/echickle/grnd_lc/"
 
-lc_f = lc_dir + "s0062-cam4-hsnr.txt" # !!
-sector, cam = 62, 4 # !!
+lc_f = lc_dir + "LDSS_230421.txt" # !!
+sector, cam = 62, 3 # !!
 
-out_dir = "/scratch/echickle/s%04d/"%sector \
-          +"s%04d-"%sector+str(cam)+"-crossmatch/"
+out_dir = "/scratch/echickle/LDSS_230421_ATLAS/"
+# out_dir = "/scratch/echickle/s%04d/"%sector \
+#           +"s%04d-"%sector+str(cam)+"-crossmatch/"
 tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 
 gaia_tab = "/scratch/echickle/100pc_clean.fits"
@@ -39,6 +40,9 @@ qmax = 0.15
 # ticid_out = np.array(ticid_out)
 # inter, comm1, comm2 = np.intersect1d(ticid, ticid_out, return_indices=True)
 # ticid = np.delete(ticid, comm1) 
+
+# !!
+ticid = ['808364853']
 
 for i in range(len(ticid)):
     print(str(i)+'/'+str(len(ticid)))

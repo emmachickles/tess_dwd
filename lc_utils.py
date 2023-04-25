@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
-def load_atlas_lc(f, n_std=2):
+def load_atlas_lc(f, n_std=2, clip=True):
 
     ###MJD     m   dm uJy duJy F err chi/N  RA   Dec    x    y  maj min phi apfit Sky  ZP  Obs  GaiaID
     data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)    
@@ -28,23 +28,24 @@ def load_atlas_lc(f, n_std=2):
     # inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
     # t, y, dy = t[inds], y[inds], dy[inds] 
 
-    q3, q1 = np.percentile(y, [75 ,25])
-    iqr=(q3-q1)/2
+    if clip:
+        q3, q1 = np.percentile(y, [75 ,25])
+        iqr=(q3-q1)/2
 
-    good_idx=(y-np.median(y))<3*iqr
-    t=t[good_idx]
-    dy=dy[good_idx]
-    y=y[good_idx]
+        good_idx=(y-np.median(y))<3*iqr
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
 
-    good_idx=(np.median(y)-y)<10*iqr
-    t=t[good_idx]
-    dy=dy[good_idx]
-    y=y[good_idx]
+        good_idx=(np.median(y)-y)<10*iqr
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
 
-    good_idx=dy>0
-    t=t[good_idx]
-    y=y[good_idx]
-    dy=dy[good_idx]  
+        good_idx=dy>0
+        t=t[good_idx]
+        y=y[good_idx]
+        dy=dy[good_idx]  
 
     # >> convert to BJD
     coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
@@ -489,16 +490,18 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
             
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period,
-                     ylabel="Relative Flux"):
+                     ylabel="Relative Flux", text_period=True):
     shift = np.max(folded_t) - np.min(folded_t)    
     ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt=".k", ms=1,
                 elinewidth=1)
     ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt=".k", ms=1,
                 elinewidth=1)
-    ax.text(0.95, 0.05, str(np.round(period*1440,5))+" min",
-            horizontalalignment="right", transform=ax.transAxes)                    
+    if text_period:
+        ax.text(0.95, 0.05, str(np.round(period*1440,5))+" min",
+                horizontalalignment="right", transform=ax.transAxes)                    
     ax.set_xlabel("Time [minutes]")
-    ax.set_ylabel(ylabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
 
 def phase(t, freq, phi0=0.):
     phi = (t * freq - phi0)
