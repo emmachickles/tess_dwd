@@ -139,6 +139,19 @@ def download_ccd(curl_file, data_dir, cam, ccd):
                 line = ' '.join(line)
                 os.system(line)
 
+def download_ccd_tica(sect_dir, sector, cam, ccd):
+    for orbit in ['o1a', 'o1b']:
+        curl_file=sect_dir+"hlsp_tica_tess_ffi_s%04d"%sector+\
+            "-"+orbit+"-cam{}-ccd{}_tess_v01_ffis.sh".format(cam,ccd)
+        with open(curl_file, 'r') as f:
+            lines = f.readlines()[1:]
+        for line in lines:
+            line = line.split(' ')
+            line[4] = sect_dir+line[4]
+            if not os.path.exists(line[4]):
+                line = ' '.join(line)
+                os.system(line)
+
 def check_download(data_dir, cam, ccd):
     import subprocess
     ccd_dir = data_dir+'cam{}-ccd{}/'.format(cam, ccd)
@@ -154,6 +167,29 @@ def check_download(data_dir, cam, ccd):
             inds = np.nonzero(sizes == sbin[i])
             for j in range(len(fnames[inds])):
                 os.system('curl -C - -L -o '+ccd_dir+fnames[inds][j]+' https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:TESS/product/'+str(fnames[inds][j]))
+    os.system('ls -lS {} | tail '.format(ccd_dir))
+
+def check_download_tica(sect_dir, sector, cam, ccd):
+    import subprocess
+
+    curl_file=sect_dir+"hlsp_tica_tess_ffi_s%04d"%sector+\
+        "-o1a-cam{}-ccd{}_tess_v01_ffis.sh".format(cam,ccd)
+    
+    ccd_dir = sect_dir+'s%04d/'%sector+'cam{}-ccd{}/'.format(cam, ccd)
+    fnames = os.listdir(ccd_dir)
+    fnames = np.array(fnames)
+    sizes = []
+    for i in range(len(fnames)):
+        sizes.append(os.path.getsize(ccd_dir+fnames[i]))
+    sizes = np.array(sizes)
+    sbin, cnts = np.unique(sizes, return_counts=True)
+    for i in range(len(sbin)):
+        if sbin[i] < np.max(sizes) and cnts[i] < 0.1*len(fnames):
+            inds = np.nonzero(sizes == sbin[i])
+            for j in range(len(fnames[inds])):
+                os.system('curl -f --create-dirs --output '+ccd_dir+fnames[inds][j]+\
+                          ' https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:HLSP/tica/s%04d/'%sector+\
+                          'cam{}-ccd{}/'.format(cam,ccd)+fnames[inds][j])
     os.system('ls -lS {} | tail '.format(ccd_dir))
                 
 def source_list(f,catalog,ticid, tica=False):
@@ -367,11 +403,14 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
+sector = 64
+
 # >> file paths
 wd_cat    = '/home/echickle/data/WDs.txt'
-data_dir  = '/home/echickle/data/s0058/s0058/'
-out_dir   = '/home/echickle/data/s0058/s0058-lc/'
-curl_file = data_dir + 'tesscurl_sector_58_ffic.sh'
+sect_dir  = '/home/echickle/data/s%04d/'%sector
+data_dir  = sect_dir+'s%04d/'%sector
+out_dir   = sect_dir+'s%04d-lc/'%sector
+curl_file = data_dir + 'tesscurl_sector_{}_ffic.sh'.format(sector)
 
 # >> light curve parameters
 N_ap  = 0.7
@@ -387,14 +426,24 @@ if len(sys.argv) > 1:
 
 # -- RUN SETTINGS --------------------------------------------------------------
     
-tica = False
-cam, ccd = 4, 4
-    
-download_ccd(curl_file, data_dir, cam, ccd)
-# check_download(data_dir, cam, ccd)
-# run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-#                  mult_output=mult_output, tica=tica)
+tica = True
 
+cam = 2
+
+for ccd in [1,2,3,4]:
+
+    # download_ccd(curl_file, data_dir, cam, ccd)
+    # check_download(data_dir, cam, ccd)
+    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+    #                  mult_output=mult_output, tica=tica)
+    # os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
+
+    download_ccd_tica(sect_dir, sector, cam, ccd)
+    check_download_tica(sect_dir, sector, cam, ccd)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
+    os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
+    
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # -- target run ----------------------------------------------------------------
