@@ -245,6 +245,8 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=
     
 
 def calc_snr(t, y, period, q, phi0):
+    from scipy.stats import median_abs_deviation
+
     t_mean = np.mean(t)
     t = t - t_mean
 
@@ -271,12 +273,17 @@ def calc_snr(t, y, period, q, phi0):
             transit = near_transit
 
     # >> get delta (depth of transit)
-    avg_out = np.mean(y[out_transit])
-    avg_in = np.mean(y[transit])
-    err_out = np.std(y[out_transit]) / np.sqrt(len(y[out_transit]))
-    err_in = np.std(y[transit]) / np.sqrt(len(y[transit]))
+    # avg_out = np.mean(y[out_transit])
+    # avg_in = np.mean(y[transit])
+    # err_out = np.std(y[out_transit]) / np.sqrt(len(y[out_transit]))
+    # err_in = np.std(y[transit]) / np.sqrt(len(y[transit]))
+    # err = np.sqrt(err_out**2 + err_in**2)
+
+    avg_out = np.median(y[out_transit])
+    avg_in = np.median(y[transit])
+    err = median_abs_deviation(y)
+
     delta = np.abs(avg_out - avg_in)
-    err = np.sqrt(err_out**2 + err_in**2)
     snr = delta/err
 
     return snr, phi, transit, near_transit, epo_TJD
@@ -457,8 +464,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax3.set_ylabel('Relative Flux')
 
         # -- save figure -------------------------------------------------------
-        fig.set_tight_layout(True)
-        # fig.tight_layout()
+        fig.tight_layout()
 
         if bls:
             prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
