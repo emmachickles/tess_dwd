@@ -32,7 +32,7 @@ def load_atlas_lc(f, n_std=2, clip=True):
         q3, q1 = np.percentile(y, [75 ,25])
         iqr=(q3-q1)/2
 
-        good_idx=(y-np.median(y))<3*iqr
+        good_idx=(y-np.median(y))<10*iqr # !! 3 
         t=t[good_idx]
         dy=dy[good_idx]
         y=y[good_idx]
@@ -282,9 +282,11 @@ def calc_snr(t, y, period, q, phi0):
     return snr, phi, transit, near_transit, epo_TJD
 
 def calc_peak_stats(freqs, power, nearpeak=3000):
+    from scipy.stats import median_abs_deviation
     peak = np.argmax(power)
+    
     # -- significance of peak ----------------------------------------------
-    sig=(np.max(power)-np.median(power))/(np.std(power))
+    sig=(np.max(power)-np.median(power)) / median_abs_deviation(power)
 
     # -- width of peak -----------------------------------------------------
     # >> threshold power (50% of peak)
@@ -455,7 +457,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax3.set_ylabel('Relative Flux')
 
         # -- save figure -------------------------------------------------------
-        fig.tight_layout()
+        fig.set_tight_layout(True)
+        # fig.tight_layout()
 
         if bls:
             prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
