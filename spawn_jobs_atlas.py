@@ -6,11 +6,14 @@ import multiprocessing
 from multiprocessing import Pool
 from run_bls_atlas import run_process
 
-data_dir = "/matchfiles/data2/ATLAS/"
-output_dir = "/home/echickle/GPU_res/"
+# data_dir = "/matchfiles/data2/ATLAS/"
+# output_dir = "/home/echickle/GPU_res/"
 
-# data_dir = "/pool001/echickle/ATLAS/"
-# output_dir = "/pool001/echickle/GPU_res/"
+data_dir = "/pool001/echickle/ATLAS/"
+output_dir = "/pool001/echickle/GPU_res/"
+
+# N_p = 3
+N_p=16 # >> engaging
 
 p = [data_dir+f for f in os.listdir(data_dir)]
 
@@ -22,7 +25,7 @@ if N<N_sub-1:
 else:
     p=p[N*sub:]
 
-p = p[:20]
+# p = p[:20]
 # p = [data_dir+str(6079447764213678592)]
 # p = []
 
@@ -41,8 +44,6 @@ p = p[:20]
 #     p.append(data_dir+str(gid[i]))
 
 if __name__ == '__main__':
-    N_p = 3
-    # N_p=16 # >> engaging
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
