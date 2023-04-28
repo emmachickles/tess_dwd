@@ -28,10 +28,10 @@ import LC_Tools
 def run_lc_extraction(data_dir, out_dir, wd_cat, cam=None, ccd=None, mult_output=False,
                       tica=False):
     # >> load white dwarf catalog
-    sources=np.loadtxt(wd_cat, usecols=(0,1,2))
-    ticid_main=sources[:,0].astype('int')
-    catalog_main=SkyCoord(ra=sources[:,1]*u.degree,
-                          dec=sources[:,2]*u.degree,
+    sources=np.loadtxt(wd_cat, usecols=(0,1,2), dtype='str')
+    ticid_main=sources[:,0]
+    catalog_main=SkyCoord(ra=sources[:,1].astype('float')*u.degree,
+                          dec=sources[:,2].astype('float')*u.degree,
                           frame='icrs')
     if cam:
         cam_list = [int(cam)]
@@ -101,28 +101,6 @@ def run_UCBs():
         
     
     pass
-
-            
-def download_sector(data_dir, out_dir, wd_cat, curl_file, cam=None):
-    if cam:
-        cam_list = [int(cam)]
-    else:
-        cam_list = [1,2,3,4]
-
-    for cam in cam_list:
-        print('Running camera '+str(cam))
-        for ccd in [1,2,3,4]: 
-            download_ccd(curl_file, data_dir, cam, ccd)
-            print('Downloaded cam {} ccd {}!'.format(cam, ccd))
-            # os.system('rm '+data_dir+ccd_dir+'*.fits')
-            # os.rmdir(data_dir+ccd_dir)
-
-def download_cam(cam, curl_file, data_dir):
-    print('Running camera '+str(cam))
-    for ccd in [1,2,3,4]: 
-        download_ccd(curl_file, data_dir, cam, ccd)
-        print('Downloaded cam {} ccd {}!'.format(cam, ccd))
-            
             
 def download_ccd(curl_file, data_dir, cam, ccd):
     ccd_dir = 'cam{}-ccd{}/'.format(cam, ccd)
@@ -403,13 +381,18 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 64
+sector = 57
 
 # >> file paths
-wd_cat    = '/home/echickle/data/WDs.txt'
+# wd_cat    = '/home/echickle/data/WDs.txt'
+wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
-out_dir   = sect_dir+'s%04d-lc/'%sector
+
+# out_dir   = sect_dir+'s%04d-lc/'%sector
+out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+
 curl_file = data_dir + 'tesscurl_sector_{}_ffic.sh'.format(sector)
 
 # >> light curve parameters
@@ -426,23 +409,23 @@ if len(sys.argv) > 1:
 
 # -- RUN SETTINGS --------------------------------------------------------------
     
-tica = True
+tica = False
 
-cam = 2
+cam = 4
 
 for ccd in [1,2,3,4]:
 
-    # download_ccd(curl_file, data_dir, cam, ccd)
-    # check_download(data_dir, cam, ccd)
-    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-    #                  mult_output=mult_output, tica=tica)
-    # os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
-
-    download_ccd_tica(sect_dir, sector, cam, ccd)
-    check_download_tica(sect_dir, sector, cam, ccd)
+    download_ccd(curl_file, data_dir, cam, ccd)
+    check_download(data_dir, cam, ccd)
     run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
                      mult_output=mult_output, tica=tica)
     os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
+
+    # download_ccd_tica(sect_dir, sector, cam, ccd)
+    # check_download_tica(sect_dir, sector, cam, ccd)
+    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+    #                  mult_output=mult_output, tica=tica)
+    # os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
     
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
