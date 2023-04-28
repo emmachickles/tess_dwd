@@ -6,6 +6,10 @@ qmin = 0.01
 qmax = 0.15
 dlogq = 0.1
 
+pow_threshold=25
+snr_threshold=1.25
+per_threshold=210
+
 # data_dir = "/home/echickle/ATLAS_TEST/"
 # data_dir = "/matchfiles/data2/ATLAS/"
 # output_dir = "/home/echickle/out/"
@@ -38,7 +42,8 @@ def run_process(f):
     # start = time.time()
     res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir, dy=dy,
                        suffix=suffix, objid=gaiaid, objid_type='GAIAID',
-                       plot_threshold=100) # !! 
+                       pow_threshold=pow_threshold, per_threshold=per_threshold,
+                       snr_threshold=snr_threshold) 
     # end=time.time()
     print('Postprocessed light curves')
     # print(end-start)
@@ -60,3 +65,6 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------
 
     run_process(data_dir + fname)
+
+
+    
