@@ -327,7 +327,7 @@ def calc_sine_fit(t, y, period):
     
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
-             snr_threshold=1.25, pow_threshold=25, per_threshold=210):
+             snr_threshold=1.25, pow_threshold=25, per_threshold=210, wid_threshold=5):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
     * phi0 : start of eclipse phase
@@ -369,7 +369,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     
     # print('Fold light curve done!')
     # == make plot =============================================================
-    if sig > pow_threshold and snr > snr_threshold and period*1440 < per_threshold: 
+    if sig > pow_threshold and snr > snr_threshold and period*1440 < per_threshold and\
+       wid > wid_threshold: 
 
         # -- initialize figure -------------------------------------------------
         fig = plt.figure(figsize=(8, 10), constrained_layout=True)
