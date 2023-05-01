@@ -381,7 +381,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 57
+sector = 58
 
 # >> file paths
 # wd_cat    = '/home/echickle/data/WDs.txt'
@@ -411,7 +411,7 @@ if len(sys.argv) > 1:
     
 tica = False
 
-cam = 4
+cam = 2
 
 for ccd in [1,2,3,4]:
 
