@@ -4,7 +4,8 @@ n_std = 5
 detrend = "wotan"
 wind = 0.1
 pmin = 400 / 60 
-pmax = 0.15
+# pmax = 0.15
+pmax = 13
 qmin = 0.01
 qmax = 0.15
 
@@ -20,11 +21,11 @@ def run_process(p):
 
     print('Starting S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
 
-    # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-    data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
+    data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
+    # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
 
-    # output_dir = "/scratch/echickle/s%04d/"%sector
-    output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+    output_dir = "/scratch/echickle/s%04d/"%sector
+    # output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
 
     bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
     os.makedirs(output_dir, exist_ok=True)
