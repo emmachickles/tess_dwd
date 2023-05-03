@@ -5,12 +5,15 @@ detrend = "wotan"
 wind = 0.1
 pmin = 400 / 60 
 # pmax = 0.15
-pmax = 13
+pmax = 10
 qmin = 0.01
 qmax = 0.15
 
+wid_threshold=6
+pow_threshold=25
+
 def run_process(p):
-    sector, cam, ccd, ticid = p
+    sector, cam, ccd, ticid, data_dir, bls_dir = p
 
     import numpy as np
     import lc_utils as lcu
@@ -20,15 +23,6 @@ def run_process(p):
     mpl.use('Agg')
 
     print('Starting S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
-
-    data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-    # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
-
-    output_dir = "/scratch/echickle/s%04d/"%sector
-    # output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
-
-    bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
-    os.makedirs(output_dir, exist_ok=True)
     os.makedirs(bls_dir, exist_ok=True)
 
     # >> load data
@@ -43,7 +37,7 @@ def run_process(p):
 
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     if flag:
-        res = [ticid] + list(np.zeros(9, dtype='int'))
+        res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
         return res
 
     try:
@@ -57,11 +51,12 @@ def run_process(p):
                  '_ra_{}_dec_{}_'.format(coord[0], coord[1])
         res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
                            objid=ticid, 
-                           suffix=suffix, bins=100, save_npy=False)
-        return [ticid] + list(res)
+                           suffix=suffix, bins=100, save_npy=False,
+                           pow_threshold=pow_threshold, wid_threshold=wid_threshold)
+        return [ticid, coord[0], coord[1]] + list(res)
 
     except:
-        res = [ticid] + list(np.zeros(9, dtype='int'))
+        res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
         return res
 
 if __name__ == '__main__':

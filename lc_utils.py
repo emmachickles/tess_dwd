@@ -267,24 +267,25 @@ def calc_snr(t, y, period, q, phi0):
     # >> other out-of-eclipse datapoints:
     out_transit = np.abs(phi) > q
  
-    if np.count_nonzero(transit) == 0:
-        transit = np.abs(phi) < 0.6*q
-        if np.count_nonzero(transit) == 0:
-            transit = near_transit
-
     # >> get delta (depth of transit)
     # avg_out = np.mean(y[out_transit])
     # avg_in = np.mean(y[transit])
     # err_out = np.std(y[out_transit]) / np.sqrt(len(y[out_transit]))
     # err_in = np.std(y[transit]) / np.sqrt(len(y[transit]))
     # err = np.sqrt(err_out**2 + err_in**2)
+    
+    if np.count_nonzero(transit) > 0:
+        avg_out = np.median(y[out_transit])
+        avg_in = np.median(y[transit])
+        # err_out = median_abs_deviation(y[out_transit])
+        # err_in = median_abs_deviation(y[transit])
+        # err = np.sqrt(err_out**2 + err_in**2)
+        err = median_abs_deviation(y[out_transit])
 
-    avg_out = np.median(y[out_transit])
-    avg_in = np.median(y[transit])
-    err = median_abs_deviation(y)
-
-    delta = np.abs(avg_out - avg_in)
-    snr = delta/err
+        delta = np.abs(avg_out - avg_in)
+        snr = delta/err
+    else:
+        snr = 0.
 
     return snr, phi, transit, near_transit, epo_TJD
 
@@ -349,6 +350,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     # -- calculate SNR ---------------------------------------------------------
     if bls:
         snr, phi, transit, near_transit, epo = calc_snr(t, y, period, q, phi0)
+        nt = np.count_nonzero(transit)
+        dphi = np.mean( np.diff( np.sort(phi) ) )
         
     # -- calculate fit ---------------------------------------------------------
     if not bls:
@@ -441,7 +444,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
         # -- plot full light curve ---------------------------------------------
         if bls:
-            ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)         
+            ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)   
             ax3_L.set_xlabel('Time [TJD]')
             ax3_L.set_ylabel('Relative Flux')
 
@@ -449,14 +452,14 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             # >> plot phase curve zoomed in on transit 
             ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
             ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k', ms=1)
+            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k')
             w = max(1, int(0.1*np.count_nonzero(near_transit)))
             inds = np.argsort(phi[near_transit])
             if np.count_nonzero(near_transit) > 0:
                 phiconv = np.convolve(phi[near_transit][inds], np.ones(w), 'valid') / w
                 yconv = np.convolve(y[near_transit][inds], np.ones(w), 'valid') / w
                 ax3_R.plot(phiconv*period*1440, yconv, '-')
-                ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
+                # ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
 
             ax3_R.set_xlabel('Time [minutes]')
             ax3_R.set_ylabel('Relative Flux')
@@ -495,7 +498,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
 
     # -- return values ---------------------------------------------------------
     if bls:
-        return sig, snr, wid, period, period*1440, q, phi0, dur, epo
+        return sig, snr, wid, period, period*1440, q, phi0, dur, epo, rp, nt, dphi
     else:
         return sig, wid, period, period*1440
 
