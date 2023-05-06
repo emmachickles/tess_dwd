@@ -105,6 +105,8 @@ for cam in [1,2,3,4]:
         nt_tess.extend(cat[11].to_numpy()[inds])
         dphi_tess.extend(cat[12].to_numpy()[inds])
 
+power_all = np.array(power_all)
+
 plt.figure()
 plt.plot(power_all, snr_all, '.k', ms=1, alpha=0.5)
 plt.plot(pow_tess, snr_tess, 'vr', label='TESS')
@@ -150,3 +152,10 @@ plt.legend()
 plt.tight_layout()
 plt.savefig(out_dir + 'nt_dphi.png')
 print(out_dir + 'nt_dphi.png')
+
+plt.figure()
+_=plt.hist(power_all[np.nonzero(power_all < 3000)], bins=100)
+plt.xlabel('Peak Significance')
+plt.ylabel('Num objects in TESS S61')
+plt.savefig(out_dir + 'pow_hist.png')
+print(out_dir + 'pow_hist.png')

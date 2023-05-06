@@ -38,4 +38,5 @@ if __name__ == "__main__":
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
     np.savetxt(gpu_dir+'GPU-{}-{}-{}.result'.format(sector, cam, ccd), np.array(result),
-               fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f')
+               fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
+               header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi')

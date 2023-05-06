@@ -5,7 +5,6 @@ detrend = "wotan"
 wind = 0.1
 pmin = 400 / 60 
 # pmax = 0.15
-pmax = 10
 qmin = 0.01
 qmax = 0.15
 

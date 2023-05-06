@@ -224,6 +224,12 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=
         y_poly = np.polyval(pval, t)
         y = y - y_poly
         y += np.median(y_poly)
+
+    if y.shape[0] < lim:
+        flag = True
+        if dy is not None:
+            return t, y, dy, flag
+        return t, y, flag
             
     # >> normalize
     y, dy = normalize_lc(y, dy)
@@ -287,7 +293,9 @@ def calc_snr(t, y, period, q, phi0):
     else:
         snr = 0.
 
-    return snr, phi, transit, near_transit, epo_TJD
+    nt = np.count_nonzero(transit)
+    dphi = np.max( np.diff( np.sort(phi) ) )
+    return snr, phi, transit, near_transit, epo_TJD, nt, dphi
 
 def calc_peak_stats(freqs, power, nearpeak=3000):
     from scipy.stats import median_abs_deviation
@@ -313,7 +321,10 @@ def calc_peak_stats(freqs, power, nearpeak=3000):
 
     wid = thr_R - thr_L
 
-    return peak, sig, wid
+    f_best = freqs[peak]
+    period=1.0/f_best
+
+    return peak, sig, wid, f_best, period
 
 def calc_sine_fit(t, y, period):
     from scipy.optimize import curve_fit
@@ -328,7 +339,7 @@ def calc_sine_fit(t, y, period):
     
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
-             snr_threshold=0, pow_threshold=0, per_threshold=1000, wid_threshold=0):
+             snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
     * phi0 : start of eclipse phase
@@ -343,15 +354,11 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     # == vetting ===============================================================
 
     # -- peak statistics -------------------------------------------------------
-    peak, sig, wid = calc_peak_stats(freqs, power, nearpeak=nearpeak)
-    f_best = freqs[peak]
-    period=1.0/f_best
+    peak, sig, wid, f_best, period = calc_peak_stats(freqs, power, nearpeak=nearpeak)
 
     # -- calculate SNR ---------------------------------------------------------
     if bls:
-        snr, phi, transit, near_transit, epo = calc_snr(t, y, period, q, phi0)
-        nt = np.count_nonzero(transit)
-        dphi = np.mean( np.diff( np.sort(phi) ) )
+        snr, phi, transit, near_transit, epo, nt, dphi = calc_snr(t, y, period, q, phi0)
         
     # -- calculate fit ---------------------------------------------------------
     if not bls:
@@ -452,7 +459,11 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             # >> plot phase curve zoomed in on transit 
             ax3_R.axvline(-0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
             ax3_R.axvline(0.5*q*period*1440, color='k', lw=0.5, ls='dashed')
-            ax3_R.plot(phi[near_transit]*period*1440, y[near_transit], '.k')
+            t_transit = phi[near_transit]*period*1440
+
+            ax3_R.plot(t_transit, y[near_transit], '.k', ms=1)
+            ax3_R.set_xlim([np.min(t_transit), np.max(t_transit)])
+
             w = max(1, int(0.1*np.count_nonzero(near_transit)))
             inds = np.argsort(phi[near_transit])
             if np.count_nonzero(near_transit) > 0:

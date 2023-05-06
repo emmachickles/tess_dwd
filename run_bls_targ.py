@@ -3,8 +3,8 @@
 n_std = 5
 detrend = "wotan"
 wind = 0.1
-pmin = 410 / 60 
-pmax = 0.13 
+pmin = 400 / 60 
+pmax = 10
 qmin = 0.01
 qmax = 0.15
 
@@ -20,6 +20,12 @@ qmax = 0.15
 # cam    = [1,         1,        1,         1,         1,         4]
 # ccd    = [1,         1,        4,         4,         3,         3]
 
+output_dir = "/scratch/echickle/BLS_Phase_Entropy/"
+ticid  = [803280089, 803332316, 802868096, 803849868, 803369981, 803313532]
+sector = [61,        61,        61,        61,        61,        61]
+cam    = [1,         1,         1,         1,         1,         1]
+ccd    = [1,         1,         1,         1,         1,         1]
+
 # output_dir = "/scratch/echickle/MGAB/"
 # ticid  = [803489769, 36085812,  835734923, 875850017, 471014834]
 # sector = [61,        61,        61,        62,        62]
@@ -32,11 +38,11 @@ qmax = 0.15
 # cam    = [2,          2]
 # ccd    = [3,          4]
 
-output_dir = "/scratch/echickle/LDSS_230421/"
-ticid  = [767706310, 875850017, 826164830, 193092806, 808364853]
-sector = [61,        62,        62,        62,        62]
-cam    = [3,         1,         2,         2,         3]
-ccd    = [3,         2,         1,         3,         4]
+# output_dir = "/scratch/echickle/LDSS_230421/"
+# ticid  = [767706310, 875850017, 826164830, 193092806, 808364853]
+# sector = [61,        62,        62,        62,        62]
+# cam    = [3,         1,         2,         2,         3]
+# ccd    = [3,         2,         1,         3,         4]
 
 # ------------------------------------------------------------------------------
 
@@ -64,8 +70,10 @@ os.makedirs(ls_dir, exist_ok=True)
 
 # ------------------------------------------------------------------------------
 
+result = []
 # >> compute BLS
 for i in range(len(ticid)):
+    print(ticid[i])
 
     data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector[i]
 
@@ -84,8 +92,6 @@ for i in range(len(ticid)):
     # t = hdul[1].data['time']
     # y = hdul[1].data['cal_psf_flux']
 
-    inds = np.argsort(t)
-    t, y = t[inds], y[inds]
 
     # # # !!
     # inds = np.nonzero( t> 59870 )
@@ -100,15 +106,21 @@ for i in range(len(ticid)):
     t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
         BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
 
-
     # -- plot phase curve ----------------------------------------------
     suffix = '_TIC%016d'%ticid[i]+'_s%04d_'%sector[i]+'cam_'+\
              str(cam[i])+'_ccd_'+str(ccd[i])+\
              '_ra_{}_dec_{}_'.format(coord[0], coord[1])
 
-    lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                 objid=ticid[i], suffix=suffix, bins=100, save_npy=False,
-                 plot_threshold=0)
+    res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
+                 objid=ticid[i], suffix=suffix, bins=100, save_npy=False)
+    res = [ticid[i], coord[0], coord[1]] + list(res)
+    result.append(res)
+
+# ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
+np.savetxt(output_dir+'GPU.result', np.array(result),
+           fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
+           header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi')
+print('Saved '+output_dir+'GPU.result')
 
     # # period = 0.038365738 # TIC 2040677137
     # # period = 0.038365738/2 # TIC 2040677137
