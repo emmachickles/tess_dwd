@@ -177,11 +177,12 @@ def source_list(f,catalog,ticid, tica=False):
 
     if tica:
         hd2=hdu_list[0].header
-        t=hd['MJD-BEG']+100/86400        
+        t=hd['MJD-BEG']+100/86400
+        # t = hd['STARTTJD'] # in TJD        
         dt = hdu_list[0].data    
     else:
         hd2=hdu_list[1].header
-        t=hd['TSTART']+300/86400.0
+        t=hd['TSTART'] # BTJD
         dt = hdu_list[1].data        
         
     n_dty = dt.shape[0]
@@ -190,9 +191,6 @@ def source_list(f,catalog,ticid, tica=False):
     print(w)
     
     central_coord=SkyCoord.from_pixel(1024,1024,w)
-    t = BJDConvert(t,central_coord.ra.deg, central_coord.dec.deg,
-                   date_format='mjd').value
-    
     print(central_coord)
     
     #idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(central_coord, 10*u.deg)
@@ -266,7 +264,8 @@ def process(f,sky_aperture,background,central_coord, tica=True):
     else:
         hd2=hdu_list[1].header # >> calibrated ffi
         cadence = hd['FFIINDEX']
-        t=hd['TSTART'] # in TJD
+        # TESS Barycentric Julian Day (BTJD), this is a Julian day minus 2457000.0 and corrected to the arrival times at the barycenter of the Solar System
+        t=hd['TSTART'] # in BTJD
 
         dt = hdu_list[1].data # >> calibrated ffi 
     n_dty = dt.shape[0]
@@ -381,7 +380,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 58
+sector = 59
 
 # >> file paths
 # wd_cat    = '/home/echickle/data/WDs.txt'
@@ -411,7 +410,7 @@ if len(sys.argv) > 1:
     
 tica = False
 
-cam = 2
+cam = 4
 
 for ccd in [1,2,3,4]:
 
