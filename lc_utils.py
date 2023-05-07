@@ -624,29 +624,12 @@ def hr_diagram(gaia_tab, ra, dec, ax):
                     "\nabs_mag: "+str(round(abs_mag, 2)),
                     horizontalalignment="right", transform=ax.transAxes) 
 
-def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,bins=100,n_std=5,wind=0.1,pmin=410/60,pmax=0.13,qmin=0.01,qmax=0.15,bls=False):
+def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
+                    gaia_tab,out_dir,suffix,bins=100,n_std=5,wind=0.1,qmin=0.01,qmax=0.15,bls=False):
 
     import pandas as pd
     import os
     from Period_Finding import BLS
-
-    fname_tess = fname_tess.split('_')    
-    if bls:
-        ticid = int(fname_tess[12][3:])
-        cam = fname_tess[15]
-        ccd = fname_tess[17]
-        per = float(fname_tess[7]) / 1440        
-        ra = float(fname_tess[19])
-        dec = float(fname_tess[21])    
-        suffix = '_'.join(fname_tess[12:22])
-    else:
-        ticid = int(fname_tess[4][3:])
-        cam = fname_tess[6]
-        ccd = fname_tess[8]
-        per = float(fname_tess[3]) / 1440        
-        ra = float(fname_tess[10])
-        dec = float(fname_tess[12])    
-        suffix = '_'.join(fname_tess[4:13])        
         
     fig = plt.figure(figsize=(16,6), constrained_layout=True)
     gs = fig.add_gridspec(nrows=3, ncols=4)
@@ -672,10 +655,10 @@ def make_panel_plot(fname_tess,fname_atlas,fnames_ztf,tess_dir,gaia_tab,out_dir,
     dy = np.ones(y.shape) * 0.1
     if bls:
         t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+            BLS(t,y,dy,pmin=400/60,pmax=10,qmin=qmin,qmax=qmax,remove=True)
     else:
         _, _, _, period, ls_power_best, freqs, power = \
-            LS_Astropy(t,y,dy,pmax=pmax)        
+            LS_Astropy(t,y,dy,pmax=10)        
     # prefix1 = 'TESS_'+prefix+'_'
     prefix1 = 'TESS_'
     per = period
