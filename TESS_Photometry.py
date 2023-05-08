@@ -380,7 +380,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 59
+sector = 61
 
 # >> file paths
 # wd_cat    = '/home/echickle/data/WDs.txt'

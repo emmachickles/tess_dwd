@@ -1,15 +1,8 @@
 # ------------------------------------------------------------------------------
 
 lc_dir = "/scratch/echickle/grnd_lc/"
-
-lc_f = lc_dir + "LDSS_230421.txt" # !!
-sector, cam = 62, 3 # !!
-
-out_dir = "/scratch/echickle/LDSS_230421_ATLAS/"
-# out_dir = "/scratch/echickle/s%04d/"%sector \
-#           +"s%04d-"%sector+str(cam)+"-crossmatch/"
-tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-
+out_dir = "/scratch/echickle/vet_ATLAS/"
+tess_dir = "/scratch/data/tess/lcur/ffi/"
 gaia_tab = "/scratch/echickle/100pc_clean.fits"
 
 bls=True
@@ -24,6 +17,10 @@ import pdb
 
 # ------------------------------------------------------------------------------
 
+fnames = ['pow_66.06_snr_1.05_wid_79_per_23.15378704_q_0.15_phi0_0.09663_GID_2861452348130844160_ra_1.6580900000000007_dec_31.070980000000006__bls.png', 'pow_33.16_snr_1.08_wid_21_per_8.15653847_q_0.029_phi0_0.00941_GID_1681045320572068352_ra_183.39771000000005_dec_65.5616__bls.png', 'pow_31.25_snr_1.17_wid_14_per_6.38822967_q_0.045_phi0_0.76221_GID_6864222642342782336_ra_300.25408999999996_dec_-22.153469999999995__bls.png', 'pow_90.36_snr_1.31_wid_39_per_11.85457275_q_0.1_phi0_0.67943_GID_2931430078489330944_ra_110.58950000000002_dec_-18.658469999999998__bls.png', 'pow_31.51_snr_1.21_wid_30_per_9.10414285_q_0.121_phi0_0.56013_GID_5952073710111588736_ra_263.71608_dec_-46.36130000000001__bls.png', 'pow_77.9_snr_1.54_wid_68_per_8.5598901_q_0.15_phi0_0.22232_GID_5414242958825679488_ra_153.42696999999998_dec_-45.28242999999999__bls.png', 'pow_53.86_snr_2.66_wid_57_per_13.84101816_q_0.15_phi0_0.49573_GID_5369709061413007360_ra_174.54546_dec_-51.66365000000002__bls.png', 'pow_112.64_snr_1.71_wid_44_per_14.44338955_q_0.066_phi0_0.96371_GID_3402486457838073728_ra_84.51133999999999_dec_19.88414__bls.png', 'pow_49.27_snr_1.46_wid_7_per_2.99823682_q_0.017_phi0_0.52036_GID_4046263851807892864_ra_275.1064999999999_dec_-31.287210000000016__bls.png', 'pow_52.28_snr_1.28_wid_72_per_17.21256909_q_0.15_phi0_0.69671_GID_2895348848506336384_ra_98.06867999999999_dec_-29.246869999999998__bls.png', 'pow_31.23_snr_1.36_wid_18_per_12.30446058_q_0.031_phi0_0.6173_GID_1558331473496025344_ra_205.15954000000008_dec_48.97572000000001__bls.png', 'pow_31.45_snr_1.5_wid_12_per_5.69361979_q_0.02_phi0_0.81363_GID_4037489916487393280_ra_273.0912899999999_dec_-38.253519999999995__bls.png', 'pow_34.2_snr_1.2_wid_13_per_7.30246422_q_0.03_phi0_0.70057_GID_4581112791947909120_ra_267.85649999999987_dec_24.74836__bls.png', 'pow_70.15_snr_1.06_wid_94_per_10.25312383_q_0.127_phi0_0.50338_GID_282679289838317184_ra_81.54341999999998_dec_59.57925__bls.png', 'pow_101.08_snr_1.46_wid_85_per_10.33688204_q_0.15_phi0_0.44297_GID_2462596293177188480_ra_30.21773_dec_-9.4088__bls.png', 'pow_76.96_snr_1.16_wid_88_per_11.27258005_q_0.15_phi0_0.71048_GID_898348313253395968_ra_109.56824000000006_dec_37.52741000000001__bls.png', 'pow_31.3_snr_1.38_wid_14_per_13.24442808_q_0.044_phi0_0.37888_GID_6730549413130291200_ra_281.39172_dec_-36.35496__bls.png', 'pow_31.03_snr_1.3_wid_13_per_16.02020391_q_0.038_phi0_0.81821_GID_4108958382819816192_ra_257.26132000000007_dec_-26.223639999999996__bls.png', 'pow_31.17_snr_1.0_wid_16_per_3.25645877_q_0.061_phi0_0.21947_GID_6735300991271626880_ra_281.9809_dec_-34.52696000000002__bls.png', 'pow_31.37_snr_2.5_wid_24_per_12.11419427_q_0.014_phi0_0.31402_GID_6090993430870020480_ra_211.98017000000002_dec_-49.27094999999999__bls.png']
+
+# ------------------------------------------------------------------------------
+
 lc_tab = np.loadtxt(lc_f, delimiter=",", dtype="str", skiprows=1)
 if len(lc_tab.shape) == 1:
     lc_tab = np.expand_dims(lc_tab, 0)
@@ -31,36 +28,10 @@ ticid = np.unique(lc_tab[:,0])
 os.makedirs(out_dir, exist_ok=True)
 
 
-for i in range(len(ticid)):
-    print(str(i)+'/'+str(len(ticid)))
-    lc_info = lc_tab[lc_tab[:,0] == ticid[i]]
-    fname_tess = lc_info[lc_info[:,1] == 'TESS'][0][2]
-    fname_atlas = lc_info[lc_info[:,1] == 'ATLAS'][:,2]
-    if len(fname_atlas) > 0:
-        fname_atlas = lc_dir+fname_atlas[0]
-    else:
-        fname_atlas = None
-    fnames_ztf = list(lc_info[lc_info[:,1] == 'ZTF'][:,2])
-    for j in range(len(fnames_ztf)):
-        fnames_ztf[j] = lc_dir+fnames_ztf[j]
-
-    fname_tess = fname_tess.split('_')    
-    if bls:
-        ticid = int(fname_tess[12][3:])
-        cam = fname_tess[15]
-        ccd = fname_tess[17]
-        per = float(fname_tess[7]) / 1440        
-        ra = float(fname_tess[19])
-        dec = float(fname_tess[21])    
-        suffix = '_'.join(fname_tess[12:22])
-    else:
-        ticid = int(fname_tess[4][3:])
-        cam = fname_tess[6]
-        ccd = fname_tess[8]
-        per = float(fname_tess[3]) / 1440        
-        ra = float(fname_tess[10])
-        dec = float(fname_tess[12])    
-        suffix = '_'.join(fname_tess[4:13])
-        
+for i in range(len(fnames)):
+    fname = fnames[i].split('_')
+    gid, per, ra, dec = fname[13], float(fname[7])/1440., float(fname[15]), float(fname[17])
+    
     lcu.make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
-                        gaia_tab,out_dir,suffix,bls=bls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)
+                        per_atlas=per,
+                        gaia_tab,out_dir,suffix,bls=bls)

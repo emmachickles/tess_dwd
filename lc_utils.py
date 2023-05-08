@@ -514,14 +514,14 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         return sig, wid, period, period*1440
 
             
-def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period,
-                     ylabel="Relative Flux", text_period=True):
+def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
+                     ylabel="Relative Flux"):
     shift = np.max(folded_t) - np.min(folded_t)    
     ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt=".k", ms=1,
                 elinewidth=1)
     ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt=".k", ms=1,
                 elinewidth=1)
-    if text_period:
+    if period is not None:
         ax.text(0.95, 0.05, str(np.round(period*1440,5))+" min",
                 horizontalalignment="right", transform=ax.transAxes)                    
     ax.set_xlabel("Time [minutes]")
@@ -575,6 +575,28 @@ def BJDConvert(times, RA, Dec, date_format='mjd', telescope='Palomar'):
     delta=t2.light_travel_time(c,kind='barycentric',location=Observatory)
     BJD_TCB=t2+delta
     return BJD_TCB
+
+def hr_diagram_wd(gid, ax):
+    '''Plot white dwarf track and surrounding areas.'''
+    from astropy.io import fits
+    
+    source_id = np.empty(0)
+    bp_rp = np.empty(0)
+    parallax = np.empty(0)
+    gmag = np.empty(0)
+    
+    maincat = fits.open('/data/GaiaEDR3_WD_main.fits') # on hypernova.mit.edu
+    source_id = np.append(source_id, maincat[1].data['source_id'])
+    bp_rp = np.append(bp_rp, maincat[1].data['bp_rp'])
+    parallax = np.append(parallax, maincat[1].data['parallax'])
+    gmag = np.append(gmag, maincat[1].data['phot_g_mean_flux'])
+    
+    rpmext = fits.open('/data/GaiaEDR3_WD_RPM_ext.fits') # on hypernova.mit.edu
+    source_id = np.append(source_id, rpmext[1].data['source_id'])
+    bp_rp = np.append(bp_rp, rpmext[1].data['bp_rp'])
+    parallax = np.append(parallax, rpmext[1].data['parallax'])
+    gmag = np.append(gmag, rpmext[1].data['phot_g_mean_flux'])
+    
     
 def hr_diagram(gaia_tab, ra, dec, ax):
 
@@ -624,8 +646,11 @@ def hr_diagram(gaia_tab, ra, dec, ax):
                     "\nabs_mag: "+str(round(abs_mag, 2)),
                     horizontalalignment="right", transform=ax.transAxes) 
 
-def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
-                    gaia_tab,out_dir,suffix,bins=100,n_std=5,wind=0.1,qmin=0.01,qmax=0.15,bls=False):
+def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
+                    per,ra,dec,gaia_tab,out_dir,suffix,
+                    per_tess=None,per_atlas=None,per_ztf=None,
+                    bins=100,n_std=5,wind=0.1,qmin=0.01,
+                    qmax=0.15,bls=False):
 
     import pandas as pd
     import os
@@ -637,12 +662,15 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
     ax1 = fig.add_subplot(gs[1, 1])
     ax2 = fig.add_subplot(gs[2, 1])    
     ax3 = fig.add_subplot(gs[:, 0])
-    ax4 = fig.add_subplot(gs[0, 2])
-    ax5 = fig.add_subplot(gs[1, 2])
-    ax6 = fig.add_subplot(gs[2, 2])
-    ax7 = fig.add_subplot(gs[0, 3])
-    ax8 = fig.add_subplot(gs[1, 3])
-    ax9 = fig.add_subplot(gs[2, 3])
+    if per_tess is None:
+        ax4 = fig.add_subplot(gs[0, 2])
+        ax7 = fig.add_subplot(gs[0, 3])
+    if per_atlas is None:
+        ax5 = fig.add_subplot(gs[1, 2])
+        ax8 = fig.add_subplot(gs[1, 3])
+    if per_ztf is None:
+        ax6 = fig.add_subplot(gs[2, 2])
+        ax9 = fig.add_subplot(gs[2, 3])
 
     # -- tess phase curve ------------------------------------------------------
 
@@ -652,104 +680,111 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
     ind = np.nonzero(ticid_list == ticid)[0][0]
     y = np.load(tess_dir+'lc'+f_suffix)[ind]
     t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
-    dy = np.ones(y.shape) * 0.1
-    if bls:
-        t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-            BLS(t,y,dy,pmin=400/60,pmax=10,qmin=qmin,qmax=qmax,remove=True)
-    else:
-        _, _, _, period, ls_power_best, freqs, power = \
-            LS_Astropy(t,y,dy,pmax=10)        
-    # prefix1 = 'TESS_'+prefix+'_'
-    prefix1 = 'TESS_'
-    per = period
-    vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-             objid=ticid, plot_threshold=0, suffix='_'+suffix)
+    
+    if per_tess is None: # -- tess period finding ------------------------------
+        dy = np.ones(y.shape) * 0.1
+        if bls:
+            t, y, dy, per_tess, bls_power_best, freqs, power, q, phi0 = \
+                BLS(t,y,dy,pmin=400/60,pmax=10,qmin=qmin,qmax=qmax,remove=True)
+        else:
+            _, _, _, per_tess, ls_power_best, freqs, power = \
+                LS_Astropy(t,y,dy,pmax=10)        
+        prefix1 = 'TESS_'
+        vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
+                 objid=ticid, suffix='_'+suffix)
+
+        ax4.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+        ax4.set_xlabel('Period [minutes]')
+
+        centr = np.argmin(np.abs(freqs - 1/per))
+        ax7.axvline(x=1/per, color='r', linestyle='dashed')
+        ax7.plot(freqs[max(0,centr-3000):centr+3000],
+                 power[max(0,centr-3000):centr+3000], '.k', ms=1)
+        ax7.set_xlabel('Frequency [1/days]')
+
+        if bls:
+            ax4.set_ylabel('TESS BLS Power')        
+            ax7.set_ylabel('TESS BLS Power')
+        else:
+            ax4.set_ylabel('TESS LS Power') 
+            ax7.set_ylabel('TESS LS Power')
+
+        
     y, _ = normalize_lc(y)
-    folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins)
-    plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period,
+    folded_t, folded_y, folded_dy = bin_timeseries(t%per_tess, y, bins)
+    plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period=per_tess,
                      ylabel="TESS Relative Flux")
 
-    ax4.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-    ax4.set_xlabel('Period [minutes]')
-
-    centr = np.argmin(np.abs(freqs - 1/per))
-    ax7.axvline(x=1/per, color='r', linestyle='dashed')
-    ax7.plot(freqs[max(0,centr-3000):centr+3000],
-             power[max(0,centr-3000):centr+3000], '.k', ms=1)
-    ax7.set_xlabel('Frequency [1/days]')
-
-    if bls:
-        ax4.set_ylabel('TESS BLS Power')        
-        ax7.set_ylabel('TESS BLS Power')
-    else:
-        ax4.set_ylabel('TESS LS Power') 
-        ax7.set_ylabel('TESS LS Power')
         
     # -- atlas phase curve ------------------------------------------------------
 
     if type(fname_atlas) == type(""):
         t, y, dy, _, _ = load_atlas_lc(fname_atlas)
-        if bls:
-            t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-                BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
-        else:
-            _, _, _, period, ls_power_best, freqs, power = \
-                LS_Astropy(t,y,dy,pmax=10)        
+        if per_atlas is None: # -- atlas period finding ------------------------
+            if bls:
+                t, y, dy, per_atlas, bls_power_best, freqs, power, q, phi0 = \
+                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
+            else:
+                _, _, _, per_atlas, ls_power_best, freqs, power = \
+                    LS_Astropy(t,y,dy,pmax=10)     
+
+            prefix1 = 'ATLAS_'
+            vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
+                     objid=ticid, dy=dy, suffix='_'+suffix)
+
+            ax5.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+            ax5.set_xlabel('Period [minutes]')
+
+            ax8.axvline(x=1/per, color='r', linestyle='dashed')        
+            ax8.plot(freqs, power, '.k', ms=1)
+            ax8.set_xlabel('Frequency [1/days]')
+            ax8.set_xlim(ax7.get_xlim())
+
+            if bls:
+                ax5.set_ylabel('ATLAS BLS Power')        
+                ax8.set_ylabel('ATLAS BLS Power')
+            else:
+                ax5.set_ylabel('ATLAS LS Power') 
+                ax8.set_ylabel('ATLAS LS Power')            
             
-        prefix1 = 'ATLAS_'
-        vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                 objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
-        folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
-        plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period,
+        folded_t, folded_y, folded_dy = bin_timeseries(t%per_atlas, y, bins, dy=dy)
+        plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period=per_atlas,
                          ylabel="ATLAS Relative Flux")
 
-        ax5.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-        ax5.set_xlabel('Period [minutes]')
+    # -- ztf phase curve -------------------------------------------------------
 
-        ax8.axvline(x=1/per, color='r', linestyle='dashed')        
-        ax8.plot(freqs, power, '.k', ms=1)
-        ax8.set_xlabel('Frequency [1/days]')
-        ax8.set_xlim(ax7.get_xlim())
-
-        if bls:
-            ax5.set_ylabel('ATLAS BLS Power')        
-            ax8.set_ylabel('ATLAS BLS Power')
-        else:
-            ax5.set_ylabel('ATLAS LS Power') 
-            ax8.set_ylabel('ATLAS LS Power')            
-
-    # -- ztf phase curve ------------------------------------------------------
-
-    # fnames = get_ztf_lc(ra, dec)
     if len(fnames_ztf) > 0:
         t, y, dy = load_ztf_lc(fnames_ztf)
-        if bls:
-            t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-                BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
-        else:
-            _, _, _, period, ls_power_best, freqs, power = \
-                LS_Astropy(t,y,dy,pmax=pmax)                    
-        prefix1 = 'ZTF_'
-        vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                 objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
-        folded_t, folded_y, folded_dy = bin_timeseries(t%period, y, bins, dy=dy)
-        plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period,
+        if per_ztf is None: # -- ztf period finding ----------------------------
+            if bls:
+                t, y, dy, per_ztf, bls_power_best, freqs, power, q, phi0 = \
+                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
+            else:
+                _, _, _, per_ztf, ls_power_best, freqs, power = \
+                    LS_Astropy(t,y,dy,pmax=pmax)                    
+            prefix1 = 'ZTF_'
+            vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
+                     objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
+
+            ax6.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+            ax6.set_xlabel('Period [minutes]')
+
+            ax9.axvline(x=1/per, color='r', linestyle='dashed')        
+            ax9.plot(freqs, power, '.k', ms=1)
+            ax9.set_xlabel('Frequency [1/days]')
+            ax9.set_xlim(ax7.get_xlim())
+
+            if bls:
+                ax6.set_ylabel('ZTF BLS Power')        
+                ax9.set_ylabel('ZTF BLS Power')
+            else:
+                ax6.set_ylabel('ZTF LS Power') 
+                ax9.set_ylabel('ZTF LS Power')   
+            
+        folded_t, folded_y, folded_dy = bin_timeseries(t%per_ztf, y, bins, dy=dy)
+        plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period=per_ztf,
                          ylabel="ZTF Relative Flux")
 
-        ax6.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-        ax6.set_xlabel('Period [minutes]')
-
-        ax9.axvline(x=1/per, color='r', linestyle='dashed')        
-        ax9.plot(freqs, power, '.k', ms=1)
-        ax9.set_xlabel('Frequency [1/days]')
-        ax9.set_xlim(ax7.get_xlim())
-
-        if bls:
-            ax6.set_ylabel('ZTF BLS Power')        
-            ax9.set_ylabel('ZTF BLS Power')
-        else:
-            ax6.set_ylabel('ZTF LS Power') 
-            ax9.set_ylabel('ZTF LS Power')            
 
     # -- hr diagram ------------------------------------------------------------
 
