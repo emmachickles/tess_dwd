@@ -47,4 +47,5 @@ if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
-    np.savetxt(output_dir+'GPU'+str(N)+'.result',np.array(result),fmt='%i,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f')
+    np.savetxt(output_dir+'GPU'+str(N)+'.result',np.array(result),
+               fmt='%i,'+','.join( ['%10.5f'] * (len(result[0])-1) ) )
