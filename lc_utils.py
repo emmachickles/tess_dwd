@@ -32,7 +32,7 @@ def load_atlas_lc(f, n_std=2, clip=True):
         q3, q1 = np.percentile(y, [75 ,25])
         iqr=(q3-q1)/2
 
-        good_idx=(y-np.median(y))<10*iqr # !! 3 
+        good_idx=(y-np.median(y))<3*iqr # !! 3 
         t=t[good_idx]
         dy=dy[good_idx]
         y=y[good_idx]
@@ -420,7 +420,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                    power[peak-wid//2:peak+wid//2], '.r', ms=1)
         ax0_R.set_xlabel('Frequency [1/days]')
 
-        if len(freqs) < 1e6:
+        if len(freqs) < 1e9: #1e6:
             ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
             ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
             ax1.set_xlabel('Period [minutes]')
