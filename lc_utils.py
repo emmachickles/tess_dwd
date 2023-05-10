@@ -339,6 +339,7 @@ def calc_sine_fit(t, y, period):
     
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
+             wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
     '''Plot power spectrum and phase-folded light curve.
     * q : ratio of eclipse duration to period
@@ -383,17 +384,33 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
        wid > wid_threshold: 
 
         # -- initialize figure -------------------------------------------------
-        fig = plt.figure(figsize=(8, 10), constrained_layout=True)
-        gs = fig.add_gridspec(nrows=4, ncols=2)
-        ax0_L = fig.add_subplot(gs[0, 0])
-        ax0_R = fig.add_subplot(gs[0, 1])
-        ax1 = fig.add_subplot(gs[1, :])
-        ax2 = fig.add_subplot(gs[2, :])    
-        if bls:
-            ax3_L = fig.add_subplot(gs[3, 0])
-            ax3_R = fig.add_subplot(gs[3, 1])
+        plot_pg=True
+        if len(freqs) < 1e6:
+            plot_pg=False
+
+        if plot_pg:
+            fig = plt.figure(figsize=(8, 10), constrained_layout=True)
+            gs = fig.add_gridspec(nrows=4, ncols=2)
+            ax0_L = fig.add_subplot(gs[0, 0])
+            ax0_R = fig.add_subplot(gs[0, 1])
+            ax1 = fig.add_subplot(gs[1, :])            
+            ax2 = fig.add_subplot(gs[2, :])    
+            if bls:
+                ax3_L = fig.add_subplot(gs[3, 0])
+                ax3_R = fig.add_subplot(gs[3, 1])
+            else:
+                ax3 = fig.add_subplot(gs[3, :])            
         else:
-            ax3 = fig.add_subplot(gs[3, :])
+            fig = plt.figure(figsize=(8, 8), constrained_layout=True)
+            gs = fig.add_gridspec(nrows=3, ncols=2)
+            ax0_L = fig.add_subplot(gs[0, 0])
+            ax0_R = fig.add_subplot(gs[0, 1])
+            ax2 = fig.add_subplot(gs[1, :])    
+            if bls:
+                ax3_L = fig.add_subplot(gs[2, 0])
+                ax3_R = fig.add_subplot(gs[2, 1])
+            else:
+                ax3 = fig.add_subplot(gs[2, :])
 
         # -- title -------------------------------------------------------------
         if bls:
@@ -409,9 +426,11 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         fig.suptitle(suptext)
 
         # -- plot periodogram --------------------------------------------------
-        if len(freqs) < 1e6:
-            ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
-            ax0_L.set_xlabel('Frequency [1/days]')
+        # if len(freqs) < 1e6:
+        #     ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+        #     ax0_L.set_xlabel('Frequency [1/days]')
+        hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
+                      rp_ext=rp_ext)
 
         # >> threshold power (50% of peak)
         ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
@@ -420,17 +439,17 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                    power[peak-wid//2:peak+wid//2], '.r', ms=1)
         ax0_R.set_xlabel('Frequency [1/days]')
 
-        if len(freqs) < 1e6:
+        if plot_pg:
             ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
             ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
             ax1.set_xlabel('Period [minutes]')
 
-        if bls:
-            ax0_L.set_ylabel('BLS Power')        
-            ax1.set_ylabel('BLS Power')
-        else:
-            ax0_L.set_ylabel('LS Power')        
-            ax1.set_ylabel('LS Power')
+            if bls:
+                # ax0_L.set_ylabel('BLS Power')        
+                ax1.set_ylabel('BLS Power')
+            else:
+                # ax0_L.set_ylabel('LS Power')        
+                ax1.set_ylabel('LS Power')
 
         # -- plot phase curve --------------------------------------------------
 
@@ -576,26 +595,75 @@ def BJDConvert(times, RA, Dec, date_format='mjd', telescope='Palomar'):
     BJD_TCB=t2+delta
     return BJD_TCB
 
-def hr_diagram_wd(gid, ax):
+def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaEDR3_WD_main.fits',
+                  rp_ext='/data/GaiaEDR3_WD_RPM_ext.fits'):
     '''Plot white dwarf track and surrounding areas.'''
     from astropy.io import fits
+    import time
+
+    if objid_type=='GAIAID':
+        gid = np.int64(objid)
+    elif objid_type=='TICID':
+        wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
+        ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == objid)[0][0]
+        # if type(wd_cat.iloc[ind][3]) == type(""):
+        gid = np.int64(wd_cat.iloc[ind][3])
     
     source_id = np.empty(0)
     bp_rp = np.empty(0)
     parallax = np.empty(0)
     gmag = np.empty(0)
-    
-    maincat = fits.open('/data/GaiaEDR3_WD_main.fits') # on hypernova.mit.edu
+
+    # start =time.time()
+    maincat = fits.open(wd_main)
     source_id = np.append(source_id, maincat[1].data['source_id'])
     bp_rp = np.append(bp_rp, maincat[1].data['bp_rp'])
     parallax = np.append(parallax, maincat[1].data['parallax'])
-    gmag = np.append(gmag, maincat[1].data['phot_g_mean_flux'])
-    
-    rpmext = fits.open('/data/GaiaEDR3_WD_RPM_ext.fits') # on hypernova.mit.edu
+    gmag = np.append(gmag, maincat[1].data['phot_g_mean_mag'])
+    # end=time.time()
+    # print(end-start)
+
+    # start = time.time()
+    rpmext = fits.open(rp_ext) 
     source_id = np.append(source_id, rpmext[1].data['source_id'])
     bp_rp = np.append(bp_rp, rpmext[1].data['bp_rp'])
     parallax = np.append(parallax, rpmext[1].data['parallax'])
-    gmag = np.append(gmag, rpmext[1].data['phot_g_mean_flux'])
+    gmag = np.append(gmag, rpmext[1].data['phot_g_mean_mag'])
+    # end = time.time()
+    # print(end-start)
+
+    # start=time.time()
+    abs_mag = gmag+5*(np.log10(parallax)-2)
+    # end = time.time()
+    # print(end-start)
+
+    ind = np.nonzero(source_id == gid)[0][0]
+
+    # ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
+    # ax.set_xlim([-0.6, 1.9])
+    # ax.set_ylim([15.5, 4])
+
+    # start=time.time()
+    _ = ax.hist2d(bp_rp, abs_mag, bins=1000, range=[[-0.6, 1.9], [4, 15.5]], density=True,
+                  cmin=0.03)
+    ax.set_xlabel('Gaia BP-RP')
+    ax.set_ylabel('Absolute Magnitude (Gaia G)')
+    ax.invert_yaxis()
+    if not np.isnan(abs_mag[ind]):
+        ax.plot([bp_rp[ind]], [abs_mag[ind]], '^r')
+        ax.text(0.95, 0.95, "bp_rp: "+str(round(bp_rp[ind],2))+\
+                "\ng_mean_mag: "+str(round(gmag[ind], 2))+\
+                "\nparallax: "+str(round(parallax[ind],2))+\
+                "\nabs_mag: "+str(round(abs_mag[ind], 2)),
+                ha="right", va='top',transform=ax.transAxes)                 
+    else:
+        ax.text(0.95, 0.95, "bp_rp: "+str(bp_rp[ind])+\
+                "\ng_mean_mag: "+str(gmag[ind])+\
+                "\nparallax: "+str(parallax[ind]),
+                ha="right", va='top', transform=ax.transAxes)
+
+    # end=time.time()
+    # print(end-start)
     
     
 def hr_diagram(gaia_tab, ra, dec, ax):

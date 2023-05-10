@@ -14,6 +14,8 @@ wid_threshold=5
 # data_dir = "/home/echickle/ATLAS_TEST/"
 # data_dir = "/matchfiles/data2/ATLAS/"
 # output_dir = "/home/echickle/out/"
+wd_main = "/data/GaiaEDR3_WD_main.fits"
+rp_ext = "/data/GaiaEDR3_WD_RPM_ext.fits"
 
 data_dir = "/pool001/echickle/ATLAS/"
 output_dir = "/pool001/echickle/out/"
@@ -44,14 +46,15 @@ def run_process(f):
     res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir, dy=dy,
                        suffix=suffix, objid=gaiaid, objid_type='GAIAID',
                        pow_threshold=pow_threshold, per_threshold=per_threshold,
-                       snr_threshold=snr_threshold, wid_threshold=wid_threshold) 
+                       snr_threshold=snr_threshold, wid_threshold=wid_threshold,
+                       wd_main=wd_main, rp_ext=rp_ext)
+    # res: sig, snr, wid, period, period_min, q, phi0, dur, epo, epo, rp, nt, dphi
     # end=time.time()
     print('Postprocessed light curves')
     # print(end-start)
+    res = [int(gaiaid)] + res
     
-    sig, snr, wid, period, period_min, q, phi0, dur, epo = res
-
-    return int(gaiaid), sig, snr, wid, period, period_min, q, phi0, dur, epo
+    return res
     
 
 if __name__ == '__main__':
