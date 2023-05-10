@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
-def load_atlas_lc(f, n_std=2, clip=True):
+def load_atlas_lc(f, pos_iqr=3, neg_iqr=10, n_std=2, clip=True, skiprows=0):
 
     ###MJD     m   dm uJy duJy F err chi/N  RA   Dec    x    y  maj min phi apfit Sky  ZP  Obs  GaiaID
-    data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=0)    
-    Filter=np.loadtxt(f,usecols=(5),skiprows=0,dtype=str) 
+    data=np.loadtxt(f,usecols=(0,3,4,16),skiprows=skiprows)
+    Filter=np.loadtxt(f,usecols=(5),skiprows=skiprows,dtype=str) 
 
     # >> filter by limiting magnitude
     ZP=data[:,3] # >> zeropoint magnitude 
@@ -32,12 +32,12 @@ def load_atlas_lc(f, n_std=2, clip=True):
         q3, q1 = np.percentile(y, [75 ,25])
         iqr=(q3-q1)/2
 
-        good_idx=(y-np.median(y))<3*iqr # !! 3 
+        good_idx=(y-np.median(y))<pos_iqr*iqr # !! 3 
         t=t[good_idx]
         dy=dy[good_idx]
         y=y[good_idx]
 
-        good_idx=(np.median(y)-y)<10*iqr
+        good_idx=(np.median(y)-y)<neg_iqr*iqr
         t=t[good_idx]
         dy=dy[good_idx]
         y=y[good_idx]
@@ -48,8 +48,8 @@ def load_atlas_lc(f, n_std=2, clip=True):
         dy=dy[good_idx]  
 
     # >> convert to BJD
-    coords=np.loadtxt(f,usecols=(8,9),skiprows=0)
-    ra, dec = np.mean(coords[:,0]), np.mean(coords[:,1])
+    coords=np.loadtxt(f,usecols=(8,9),skiprows=skiprows)
+    ra, dec = np.round(np.mean(coords[:,0]),5), np.round(np.mean(coords[:,1]),5)
     t = BJDConvert(t,ra,dec, date_format='mjd').value    
 
     return t, y, dy, ra, dec
@@ -339,6 +339,7 @@ def calc_sine_fit(t, y, period):
     
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
+             ra=None, dec=None,
              wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
     '''Plot power spectrum and phase-folded light curve.
@@ -384,9 +385,9 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
        wid > wid_threshold: 
 
         # -- initialize figure -------------------------------------------------
-        plot_pg=True
+        plot_pg=False
         if len(freqs) < 1e6:
-            plot_pg=False
+            plot_pg=True
 
         if plot_pg:
             fig = plt.figure(figsize=(8, 10), constrained_layout=True)
@@ -421,7 +422,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                       ' WD: '+str(round(rp, 2))+' '+r'$R_\oplus$'
         else:
             suptext='period: '+str(round(period*1440,2))+' min'            
-        if objid is not None:
+        if objid is not None and objid_type is not None:
             suptext = objid_type+' '+str(objid)+', ' + suptext
         fig.suptitle(suptext)
 
@@ -429,8 +430,9 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         # if len(freqs) < 1e6:
         #     ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
         #     ax0_L.set_xlabel('Frequency [1/days]')
-        hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
-                      rp_ext=rp_ext)
+        if objid_type is not None:
+            hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
+                          rp_ext=rp_ext, ra=ra, dec=dec)
 
         # >> threshold power (50% of peak)
         ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
@@ -502,10 +504,12 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         fig.tight_layout()
 
         if bls:
-            prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
-                     str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+\
-                     str(round(q,5))+\
-                     '_phi0_'+str(round(phi0,5))
+            # prefix = 'pow_'+str(round(sig, 2))+'_snr_'+str(round(snr,2))+'_wid_'+\
+            #          str(wid)+'_per_'+str(round(period*1440,8))+'_q_'+\
+            #          str(round(q,5))+\
+            #          '_phi0_'+str(round(phi0,5))
+            prefix = 'pow_'+str(round(sig, 2))+'_per_'+str(round(period*1440,8))+'_q_'+\
+                     str(round(q,5))+'_phi0_'+str(round(phi0,5))            
         else:
             prefix = 'pow_'+str(round(sig, 2))+'_wid_'+str(wid)+'_per_'+\
                      str(round(period*1440,8))
@@ -596,18 +600,11 @@ def BJDConvert(times, RA, Dec, date_format='mjd', telescope='Palomar'):
     return BJD_TCB
 
 def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaEDR3_WD_main.fits',
-                  rp_ext='/data/GaiaEDR3_WD_RPM_ext.fits'):
+                  rp_ext='/data/GaiaEDR3_WD_RPM_ext.fits', ra=None, dec=None):
     '''Plot white dwarf track and surrounding areas.'''
     from astropy.io import fits
     import time
 
-    if objid_type=='GAIAID':
-        gid = np.int64(objid)
-    elif objid_type=='TICID':
-        wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
-        ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == objid)[0][0]
-        # if type(wd_cat.iloc[ind][3]) == type(""):
-        gid = np.int64(wd_cat.iloc[ind][3])
     
     source_id = np.empty(0)
     bp_rp = np.empty(0)
@@ -637,7 +634,6 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     # end = time.time()
     # print(end-start)
 
-    ind = np.nonzero(source_id == gid)[0][0]
 
     # ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
     # ax.set_xlim([-0.6, 1.9])
@@ -649,17 +645,43 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     ax.set_xlabel('Gaia BP-RP')
     ax.set_ylabel('Absolute Magnitude (Gaia G)')
     ax.invert_yaxis()
-    if not np.isnan(abs_mag[ind]):
-        ax.plot([bp_rp[ind]], [abs_mag[ind]], '^r')
-        ax.text(0.95, 0.95, "bp_rp: "+str(round(bp_rp[ind],2))+\
-                "\ng_mean_mag: "+str(round(gmag[ind], 2))+\
-                "\nparallax: "+str(round(parallax[ind],2))+\
-                "\nabs_mag: "+str(round(abs_mag[ind], 2)),
+
+    if objid_type is None:
+        import astropy.units as u
+        from astropy.coordinates import SkyCoord
+        from astroquery.gaia import Gaia
+        Gaia.ROW_LIMIT = 5
+        Gaia.MAIN_GAIA_TABLE = "gaiadr3.gaia_source"
+        coord = SkyCoord(ra=ra, dec=dec,
+                         unit=(u.degree, u.degree), frame='icrs')
+        j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
+        # not in use
+        
+    else:    
+        if objid_type=='GAIAID':
+            gid = np.int64(objid)
+        elif objid_type=='TICID':
+            wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
+            ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == objid)[0][0]
+            # if type(wd_cat.iloc[ind][3]) == type(""):
+            gid = np.int64(wd_cat.iloc[ind][3])
+        ind = np.nonzero(source_id == gid)[0][0]
+        c_targ = bp_rp[ind]
+        g_targ = gmag[ind]
+        p_targ = parallax[ind]
+        m_targ = abs_mag[ind]
+        
+    if not np.isnan(m_targ):
+        ax.plot([c_targ], [m_targ], '^r')
+        ax.text(0.95, 0.95, "bp_rp: "+str(round(c_targ,2))+\
+                "\ng_mean_mag: "+str(round(g_targ, 2))+\
+                "\nparallax: "+str(round(p_targ,2))+\
+                "\nabs_mag: "+str(round(m_targ, 2)),
                 ha="right", va='top',transform=ax.transAxes)                 
     else:
-        ax.text(0.95, 0.95, "bp_rp: "+str(bp_rp[ind])+\
-                "\ng_mean_mag: "+str(gmag[ind])+\
-                "\nparallax: "+str(parallax[ind]),
+        ax.text(0.95, 0.95, "bp_rp: "+str(c_targ)+\
+                "\ng_mean_mag: "+str(g_targ)+\
+                "\nparallax: "+str(p_targ),
                 ha="right", va='top', transform=ax.transAxes)
 
     # end=time.time()

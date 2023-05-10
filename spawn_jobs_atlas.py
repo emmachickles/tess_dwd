@@ -7,24 +7,26 @@ from multiprocessing import Pool
 from run_bls_atlas import run_process
 
 # data_dir = "/matchfiles/data2/ATLAS/"
-# output_dir = "/home/echickle/GPU_res/"
+data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
+output_dir = "/home/echickle/GPU_res/"
 
-data_dir = "/pool001/echickle/ATLAS/"
-output_dir = "/pool001/echickle/GPU_res/"
+# data_dir = "/pool001/echickle/ATLAS/"
+# output_dir = "/pool001/echickle/GPU_res/"
 
-# N_p = 3
-N_p=16 # >> engaging
+N_p = 3 # >> hypernova.Caltech.edu
+# N_p=16 # >> engaging
 
 p = [data_dir+f for f in os.listdir(data_dir)]
 
 N=int(sys.argv[1])
 N_sub = 500
 sub=int(np.ceil(len(p)/N_sub)) # 1393864 files, 500 sublists = 2780 files per job
-if N<N_sub-1:
-    p=p[N*sub:(N+1)*sub]
-else:
-    p=p[N*sub:]
+if N == N_sub:
+    p=p[(N-1)*sub:]
+else:    
+    p=p[(N-1)*sub:N*sub]
 
+p = [data_dir+f for f in os.listdir(data_dir)]
 # p = p[:20]
 # p = [data_dir+str(6079447764213678592)]
 # p = []
@@ -43,9 +45,10 @@ else:
 # for i in range(len(gid)):
 #     p.append(data_dir+str(gid[i]))
 
+    
 if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
     np.savetxt(output_dir+'GPU'+str(N)+'.result',np.array(result),
-               fmt='%i,'+','.join( ['%10.5f'] * (len(result[0])-1) ) )
+               fmt='%s,'+','.join( ['%10.5f'] * (len(result[0])-1) ) )
