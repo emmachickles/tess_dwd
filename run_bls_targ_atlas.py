@@ -4,12 +4,13 @@ from Period_Finding import BLS
 qmin = 0.01
 qmax = 0.15
 output_dir = "/home/echickle/out/"
-data_dir = "/matchfiles/data2/ATLAS/"
-gid = 4085034074899981312
+# data_dir = "/matchfiles/data2/ATLAS/"
+data_dir = '/data/ATLAS/'
+gid = 580790014913812608
 fname_atlas = data_dir + str(gid)
 suffix="_"+str(gid)
 
-t, y, dy, ra, dec = lcu.load_atlas_lc(fname_atlas)
+t, y, dy, ra, dec = lcu.load_atlas_lc(fname_atlas, clip=False)
 print(ra)
 print(dec)
 t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
