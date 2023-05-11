@@ -16,6 +16,7 @@ data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
 bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
 gpu_dir = output_dir + "s%04d"%sector + "-gpu-res/"
 os.makedirs(output_dir, exist_ok=True)
+os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(gpu_dir, exist_ok=True)
 
 suffix = "-{}-{}.npy".format(cam, ccd)

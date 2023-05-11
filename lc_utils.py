@@ -531,8 +531,19 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                     np.array([folded_y, folded_dy]).T)
 
     # -- return values ---------------------------------------------------------
+    sig = np.round(sig, 5)
+    snr = np.round(snr,5)
+    wid = np.int64(wid)
+    period = np.round(period,5)
+    period_min = np.round(period*1440, 3)
+    q = np.round(q,5)
+    phi0 = np.round(phi0,5)
+    epo = np.round(epo,5)
+    rp = np.round(rp, 2)
+    nt = np.int64(nt)
+    dphi = np.round(dphi, 5)
     if bls:
-        return sig, snr, wid, period, period*1440, q, phi0, dur, epo, rp, nt, dphi
+        return sig, snr, wid, period, period*1440, q, phi0, epo, rp, nt, dphi
     else:
         return sig, wid, period, period*1440
 
@@ -655,7 +666,7 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
         coord = SkyCoord(ra=ra, dec=dec,
                          unit=(u.degree, u.degree), frame='icrs')
         j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
-        # not in use
+        # not in use currently
         
     else:    
         if objid_type=='GAIAID':
