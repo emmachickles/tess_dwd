@@ -1,3 +1,4 @@
+
 import pdb
 import os
 import sys
@@ -7,7 +8,8 @@ from multiprocessing import Pool
 from run_bls_atlas import run_process
 
 # data_dir = "/matchfiles/data2/ATLAS/"
-data_dir = "/home/echickle/data/atlasforcedphotometryresults_ZTF/"
+data_dir = "/home/echickle/data/atlasforcedphotometryresults_DWD/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults_ZTF/"
 # data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
 output_dir = "/home/echickle/out/"
 
@@ -15,8 +17,8 @@ output_dir = "/home/echickle/out/"
 # data_dir = "/pool001/echickle/ATLAS/"
 # output_dir = "/pool001/echickle/GPU_res/"
 
-bls_dir = output_dir + 'JVR_plot/'
-gpu_dir = output_dir + 'JVR_gpu_res/'
+bls_dir = output_dir + 'DWD_plot/'
+gpu_dir = output_dir + 'DWD_gpu_res/'
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(gpu_dir, exist_ok=True)
@@ -61,3 +63,4 @@ if __name__ == '__main__':
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
     np.savetxt(gpu_dir+'GPU'+str(N)+'.result',np.array(result),
                fmt='%s')
+    print(gpu_dir+'GPU'+str(N)+'.result')

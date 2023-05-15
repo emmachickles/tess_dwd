@@ -338,7 +338,7 @@ def calc_sine_fit(t, y, period):
     return err, fitfunc
     
 def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
+             objid=None, objid_type='TICID', bins=60, bls=True, save_npy=False, nearpeak=3000,
              ra=None, dec=None,
              wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
@@ -395,7 +395,9 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             ax0_L = fig.add_subplot(gs[0, 0])
             ax0_R = fig.add_subplot(gs[0, 1])
             ax1 = fig.add_subplot(gs[1, :])            
-            ax2 = fig.add_subplot(gs[2, :])    
+            # ax2 = fig.add_subplot(gs[2, :])
+            ax2_L = fig.add_subplot(gs[1, 0])    
+            ax2_R = fig.add_subplot(gs[1, 1])                            
             if bls:
                 ax3_L = fig.add_subplot(gs[3, 0])
                 ax3_R = fig.add_subplot(gs[3, 1])
@@ -406,7 +408,9 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
             gs = fig.add_gridspec(nrows=3, ncols=2)
             ax0_L = fig.add_subplot(gs[0, 0])
             ax0_R = fig.add_subplot(gs[0, 1])
-            ax2 = fig.add_subplot(gs[1, :])    
+            # ax2 = fig.add_subplot(gs[1, :])
+            ax2_L = fig.add_subplot(gs[1, 0])    
+            ax2_R = fig.add_subplot(gs[1, 1])                
             if bls:
                 ax3_L = fig.add_subplot(gs[2, 0])
                 ax3_R = fig.add_subplot(gs[2, 1])
@@ -430,9 +434,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         # if len(freqs) < 1e6:
         #     ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
         #     ax0_L.set_xlabel('Frequency [1/days]')
-        if objid_type is not None:
-            hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
-                          rp_ext=rp_ext, ra=ra, dec=dec)
+        hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
+                      rp_ext=rp_ext, ra=ra, dec=dec)
 
         # >> threshold power (50% of peak)
         ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
@@ -440,7 +443,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
                    power[peak-wid//2:peak+wid//2], '.r', ms=1)
         ax0_R.set_xlabel('Frequency [1/days]')
-
+        ax0_R.set_yticklabels([])
+        
         if plot_pg:
             ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
             ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
@@ -459,17 +463,33 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
         folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
         shift = np.max(folded_t) - np.min(folded_t)        
         if type(bins) != type(None):
-            ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
+            ax2_L.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
-            ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+            ax2_L.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
 
         else:
-            ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
-            ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-        ax2.set_xlabel('Time [minutes]')
-        ax2.set_ylabel('Relative Flux')
+            ax2_L.plot(folded_t*1440, folded_y, '.k', ms=1)
+            ax2_L.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
+        ax2_L.set_xlabel('Time [minutes]')
+        ax2_L.set_ylabel('Relative Flux')
+        ax2_R.set_ylim(ax2_L.get_ylim())
+        ax2_R.set_yticklabels([])
+        ax2_R.set_xlabel('Time [minutes]')
+        folded_t2, folded_y2, folded_dy2 = bin_timeseries(t%(period*2), y, bins, dy=dy)
+        folded_t2, folded_dy2 = np.array(folded_t2), np.array(folded_dy2)
+        shift = np.max(folded_t2) - np.min(folded_t2)
+        if type(bins) != type(None):
+            ax2_R.errorbar(folded_t2*1440, folded_y2, yerr=folded_dy2,
+                           fmt='.k', ms=1, elinewidth=1)
+            ax2_R.errorbar((folded_t2+shift)*1440, folded_y2, yerr=folded_dy2,
+                           fmt='.k', ms=1, elinewidth=1)
 
+        else:
+            ax2_R.plot(folded_t2*1440, folded_y2, '.k', ms=1)
+            ax2_R.plot((folded_t2+shift)*1440, folded_y2, '.k', ms=1)                    
+        
+        
         # -- plot full light curve ---------------------------------------------
         if bls:
             ax3_L.plot(t, y, '.k', ms=0.8, alpha=0.8)   
@@ -494,7 +514,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                 # ax3_R.set_ylim([np.min(yconv)-0.1, np.max(yconv)+0.1])
 
             ax3_R.set_xlabel('Time [minutes]')
-            ax3_R.set_ylabel('Relative Flux')
+            ax3_R.yaxis.tick_right()
         else:
             ax3.plot(t, y, '.k', ms=0.8, alpha=0.8)
             ax3.set_xlabel('Time [TJD]')
@@ -534,18 +554,18 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     sig = np.round(sig, 5)
     snr = np.round(snr,5)
     wid = np.int64(wid)
-    period = np.round(period,5)
+    period = np.round(period,10)
     period_min = np.round(period*1440, 3)
     q = np.round(q,5)
     phi0 = np.round(phi0,5)
-    epo = np.round(epo,5)
+    epo = np.round(epo,7)
     rp = np.round(rp, 2)
     nt = np.int64(nt)
     dphi = np.round(dphi, 5)
     if bls:
-        return sig, snr, wid, period, period*1440, q, phi0, epo, rp, nt, dphi
+        return sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
     else:
-        return sig, wid, period, period*1440
+        return sig, wid, period, period_min
 
             
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
@@ -562,6 +582,48 @@ def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
     if ylabel is not None:
         ax.set_ylabel(ylabel)
 
+def plot_eclipse_timing(t, y, per, epo, q, out):
+    def get_phase(t, epo, per):
+        # get phase, where mid-eclipse is at 0.5
+        phi= np.mod(t - epo, per) / per + 0.5 
+        
+        if np.isscalar(phi):
+            if phi > 1.:
+                phi -= 1
+        else:
+            phi[phi > 1.] -= 1
+        return phi
+        
+    plt.figure()
+    phi = get_phase(t, epo, per)
+    shift = np.max(phi) - np.min(phi)
+    plt.axvline(x=0.5, c='r', linestyle='dashed', label='phi=0.5\n'+str(epo)+' MJD', lw=1, alpha=0.5)
+    
+    epo_sup = epo+0.5*per
+    phi_sup = get_phase(epo_sup, epo, per)
+    plt.axvline(x=phi_sup, c='r', linestyle='dashed', label='phi=0.75\n'+str(epo_sup)+' MJD', lw=1, alpha=0.5)
+    
+    epo_inf = epo-0.5*per
+    phi_inf = get_phase(epo_inf, epo, per)
+    plt.axvline(x=phi_inf, c='r', linestyle='dashed', label='phi=0.25\n'+str(epo_inf)+' MJD', lw=1, alpha=0.5)
+
+    epo_egr = epo+q*0.5*per
+    phi_egr = get_phase(epo_egr, epo, per)
+    plt.axvline(x=phi_egr, c='b', linestyle='dashed', label='Egress\n'+str(epo_egr)+' MJD', lw=1, alpha=0.5)
+    
+    epo_ing = epo-q*0.5*per
+    phi_ing = get_phase(epo_ing, epo, per)
+    plt.axvline(x=phi_ing, c='b', linestyle='dashed', label='Ingress\n'+str(epo_ing)+' MJD', lw=1, alpha=0.5)
+    
+    plt.plot(phi, y, '.k', ms=1)
+    plt.plot(phi+shift, y, '.k', ms=1)
+    plt.xlabel('Phase')
+    plt.ylabel('Flux in microJanskys') # Flux in microJanskys
+    plt.legend(loc='upper right' )
+    plt.savefig(out+'phase_curve_T0_'+str(epo)+'_per_'+str(per)+'.png', dpi=300)
+    print('Saved '+out+'phase_curve_T0_'+str(epo)+'_per_'+str(per)+'.png')
+    
+        
 def phase(t, freq, phi0=0.):
     phi = (t * freq - phi0)
     phi -= np.floor(phi)
@@ -616,7 +678,6 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     from astropy.io import fits
     import time
 
-    
     source_id = np.empty(0)
     bp_rp = np.empty(0)
     parallax = np.empty(0)
@@ -645,18 +706,7 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     # end = time.time()
     # print(end-start)
 
-
-    # ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
-    # ax.set_xlim([-0.6, 1.9])
-    # ax.set_ylim([15.5, 4])
-
-    # start=time.time()
-    _ = ax.hist2d(bp_rp, abs_mag, bins=1000, range=[[-0.6, 1.9], [4, 15.5]], density=True,
-                  cmin=0.03)
-    ax.set_xlabel('Gaia BP-RP')
-    ax.set_ylabel('Absolute Magnitude (Gaia G)')
-    ax.invert_yaxis()
-
+    
     if objid_type is None:
         import astropy.units as u
         from astropy.coordinates import SkyCoord
@@ -666,9 +716,18 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
         coord = SkyCoord(ra=ra, dec=dec,
                          unit=(u.degree, u.degree), frame='icrs')
         j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
-        # not in use currently
-        
-    else:    
+        if len(j.get_results()['phot_g_mean_mag']) > 0 and \
+           len(j.get_results()['bp_rp']) > 0:
+            c_targ = j.get_results()['bp_rp'][0]        
+            g_targ = j.get_results()['phot_g_mean_mag'][0]
+            p_targ = j.get_results()['parallax'][0]
+            if str(p_targ) == '--':
+                m_targ = np.nan
+            else:
+                m_targ = g_targ + 5*(np.log10(p_targ)-2)
+        else:
+            m_targ = np.nan
+    else:
         if objid_type=='GAIAID':
             gid = np.int64(objid)
         elif objid_type=='TICID':
@@ -683,18 +742,26 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
         m_targ = abs_mag[ind]
         
     if not np.isnan(m_targ):
+
+
+
+        # ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
+        # ax.set_xlim([-0.6, 1.9])
+        # ax.set_ylim([15.5, 4])
+
+        # start=time.time()
+        _ = ax.hist2d(bp_rp, abs_mag, bins=1000, range=[[-0.6, 1.9], [4, 15.5]], density=True,
+                      cmin=0.03)
+        ax.set_xlabel('Gaia BP-RP')
+        ax.set_ylabel('Absolute Magnitude (Gaia G)')
+        ax.invert_yaxis()
+        
         ax.plot([c_targ], [m_targ], '^r')
         ax.text(0.95, 0.95, "bp_rp: "+str(round(c_targ,2))+\
                 "\ng_mean_mag: "+str(round(g_targ, 2))+\
                 "\nparallax: "+str(round(p_targ,2))+\
                 "\nabs_mag: "+str(round(m_targ, 2)),
                 ha="right", va='top',transform=ax.transAxes)                 
-    else:
-        ax.text(0.95, 0.95, "bp_rp: "+str(c_targ)+\
-                "\ng_mean_mag: "+str(g_targ)+\
-                "\nparallax: "+str(p_targ),
-                ha="right", va='top', transform=ax.transAxes)
-
     # end=time.time()
     # print(end-start)
     

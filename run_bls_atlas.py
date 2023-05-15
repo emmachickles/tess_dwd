@@ -40,7 +40,7 @@ def run_process(p):
     print('Starting '+f)
     
     t, y, dy, ra, dec = lcu.load_atlas_lc(f, pos_iqr=pos_iqr, neg_iqr=neg_iqr,
-                                          skiprows=skiprows)
+                                          skiprows=skiprows, clip=False)
     print('Loaded '+f)
 
     # start =time.time()
