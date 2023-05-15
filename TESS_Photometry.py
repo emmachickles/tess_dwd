@@ -386,11 +386,11 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 64
+sector = 62
 
 # >> file paths
-wd_cat    = '/home/echickle/data/WDs.txt'
-# wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+# wd_cat    = '/home/echickle/data/WDs.txt'
+wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
@@ -414,23 +414,25 @@ if len(sys.argv) > 1:
 
 # -- RUN SETTINGS --------------------------------------------------------------
     
-tica = True
-
-cam = 4
+tica = False
+cam = 2
 
 for ccd in [1,2,3,4]:
 
-    # download_ccd(curl_file, data_dir, cam, ccd)
-    # check_download(data_dir, cam, ccd)
+    download_ccd(curl_file, data_dir, cam, ccd)
+    check_download(data_dir, cam, ccd)
+    try:
+        run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                         mult_output=mult_output, tica=tica)
+    except:
+        pass
+    os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
+
+    # download_ccd_tica(sect_dir, sector, cam, ccd)
+    # check_download_tica(sect_dir, sector, cam, ccd)
     # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
     #                  mult_output=mult_output, tica=tica)
     # os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
-
-    download_ccd_tica(sect_dir, sector, cam, ccd)
-    check_download_tica(sect_dir, sector, cam, ccd)
-    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                     mult_output=mult_output, tica=tica)
-    os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
     
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

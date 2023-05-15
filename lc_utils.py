@@ -356,7 +356,8 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     # == vetting ===============================================================
 
     # -- peak statistics -------------------------------------------------------
-    peak, sig, wid, f_best, period = calc_peak_stats(freqs, power, nearpeak=nearpeak)
+    peak, sig, wid, f_best, period = \
+        calc_peak_stats(freqs, power, nearpeak=nearpeak)
 
     # -- calculate SNR ---------------------------------------------------------
     if bls:
@@ -629,7 +630,7 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     parallax = np.append(parallax, maincat[1].data['parallax'])
     gmag = np.append(gmag, maincat[1].data['phot_g_mean_mag'])
     # end=time.time()
-    # print(end-start)
+    # maincat = fits.open(wd_main)print(end-start)
 
     # start = time.time()
     rpmext = fits.open(rp_ext) 
