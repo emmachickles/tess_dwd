@@ -2,10 +2,10 @@
 
 pos_iqr = 3
 neg_iqr = 10
-skiprows = 1
-objid_type = None
-# skiprows = 0
-# objid_type = 'GAIAID'
+# skiprows = 1
+# objid_type = None
+skiprows = 0
+objid_type = 'GAIAID'
 
 pmin = 2 # minutes
 pmax = 10 # days 
@@ -40,12 +40,19 @@ def run_process(p):
     print('Starting '+f)
     
     t, y, dy, ra, dec = lcu.load_atlas_lc(f, pos_iqr=pos_iqr, neg_iqr=neg_iqr,
-                                          skiprows=skiprows, clip=False)
+                                          skiprows=skiprows)
     print('Loaded '+f)
 
     # start =time.time()
+    freqs_to_remove = []
+    df = 0.05
+    freqs_to_remove.append([1 - df, 1 + df])
+    freqs_to_remove.append([1/2. - df, 1/2. + df])
+    freqs_to_remove.append([1/4. - df, 1/4. + df])    
+    y, dy = lcu.normalize_lc(y, dy)
     t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,dlogq=dlogq,remove=False)
+        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,dlogq=dlogq,
+            freqs_to_remove=freqs_to_remove)
     # end=time.time()
     print('Computed BLS '+f)        
     # print(end-start)
@@ -69,16 +76,23 @@ def run_process(p):
 
 if __name__ == '__main__':
 
-    import sys
-    fname = sys.argv[1]
 
     import os
+    data_dir = "/home/echickle/data/atlasforcedphotometryresults_DWD/"
+    output_dir = "/home/echickle/out/"
+    bls_dir = output_dir + 'DWD_plot/'    
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(bls_dir, exist_ok=True)
 
+    import sys
+    # fname = sys.argv[1]
+    fname = data_dir+'job474720.txt'
+    
     # --------------------------------------------------------------------------
 
-    run_process(data_dir + fname)
+    p = [fname, data_dir, bls_dir]
+    
+    run_process(p)
 
 
     

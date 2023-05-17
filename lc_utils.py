@@ -191,6 +191,9 @@ def normalize_lc(y, dy=None):
     y = y/med
     if dy is not None:
         dy = dy/med
+    if np.min(y) == 0.:
+        y += 0.01
+        dy += 0.01
     return y, dy
 
 def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=None,
