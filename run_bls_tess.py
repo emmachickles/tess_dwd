@@ -56,6 +56,8 @@ def run_process(p):
 
     except:
         res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
+        import pdb 
+        pdb.set_trace()
         return res
 
 if __name__ == '__main__':
