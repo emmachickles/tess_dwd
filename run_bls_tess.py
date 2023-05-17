@@ -41,8 +41,21 @@ def run_process(p):
 
     try:
         dy = np.ones(y.shape)
+        freqs_to_remove = []
+
+        df = 0.1
+        freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
+        freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
+        freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
+        freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
+        freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
+        freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
+        freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
+        freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+
+        
         t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,remove=True)
+            BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,freqs_to_remove=freqs_to_remove)
         print('Computed BLS S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
         
         suffix = '_TIC%016d'%ticid+'_s%04d_'%sector+'cam_'+\

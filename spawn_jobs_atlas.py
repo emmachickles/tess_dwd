@@ -7,28 +7,30 @@ import multiprocessing
 from multiprocessing import Pool
 from run_bls_atlas import run_process
 
+desc = "WDUCB"
+
+data_dir = "/home/echickle/data/atlas_"+desc+"/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults_"+desc+"/"
+output_dir = "/home/echickle/out/"
+bls_dir = output_dir + 'plot_'+desc+'/'
+
 # data_dir = "/matchfiles/data2/ATLAS/"
-data_dir = "/home/echickle/data/atlasforcedphotometryresults_DWD/"
 # data_dir = "/home/echickle/data/atlasforcedphotometryresults_ZTF/"
 # data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
-output_dir = "/home/echickle/out/"
 
 
 # data_dir = "/pool001/echickle/ATLAS/"
 # output_dir = "/pool001/echickle/GPU_res/"
 
-bls_dir = output_dir + 'DWD_plot/'
-gpu_dir = output_dir + 'DWD_gpu_res/'
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(bls_dir, exist_ok=True)
-os.makedirs(gpu_dir, exist_ok=True)
 
 N_p = 3 # >> hypernova.Caltech.edu
 # N_p=16 # >> engaging
 
 p = [data_dir+f for f in os.listdir(data_dir)]
 
-N=int(sys.argv[1])
+# N=int(sys.argv[1])
 # N_sub = 500
 # sub=int(np.ceil(len(p)/N_sub)) # 1393864 files, 500 sublists = 2780 files per job
 # if N == N_sub:
@@ -57,10 +59,11 @@ N=int(sys.argv[1])
 for i in range(len(p)):
     p[i] = [p[i], data_dir, bls_dir]
 
+
 if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
-    np.savetxt(gpu_dir+'GPU'+str(N)+'.result',np.array(result),
-               fmt='%s')
-    print(gpu_dir+'GPU'+str(N)+'.result')
+    np.savetxt(output_dir+'GPU_'+desc+'.result',np.array(result),
+               fmt='%s', header='gaiaid ra dec sig snr wid period period_min q phi0 epo rp nt dphi')
+    print(output_dir+'GPU_'+desc+'.result')

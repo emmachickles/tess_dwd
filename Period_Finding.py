@@ -29,7 +29,7 @@ def remove_harmonics(freqs, power, dur=None, epo=None):
         else: 
                 return freqs, power
         
-def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,remove=True):
+def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,freqs_to_remove=None):
         import cuvarbase.bls as bls
         from astropy.timeseries import BoxLeastSquares
         import astropy.units as u
@@ -37,6 +37,7 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,remove=True):
         tmean = np.mean(t)
         t=t-tmean
 
+        
         # set up search parameters
         search_params = dict(qmin=qmin, qmax=qmax,
                      # The logarithmic spacing of q
@@ -63,19 +64,8 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,remove=True):
 
         bls_power = bls.eebls_gpu_fast(t, y, dy, freqs,
                                        **search_params)
-        
-        if remove:
-                freqs_to_remove = []
 
-                df = 0.1
-                freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
-                freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
-                freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
-                freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
-                freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
-                freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
-                freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
-                freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+        if freqs_to_remove is not None:
 
                 for pair in freqs_to_remove:
                         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
