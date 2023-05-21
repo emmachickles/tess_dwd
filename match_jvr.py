@@ -1,12 +1,13 @@
-data_dir = "/scratch/data/tess/lcur/ffi/s0057-lc-ZTF/"
-
+# data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc-ZTF/"
+data_dir = "/home/echickle/data/s0062/s0062-lc-ZTF/"
 import os
 import numpy as np
 from astroquery.mast import Catalogs
 
-for cam in [1,2,3,4]:
-    for ccd in [1,2,3,4]:
+for cam in [2]:
+    for ccd in [3]:
         suffix = '-{}-{}.npy'.format(cam, ccd)
+        # suffix = suffix_list[i]
 
         old_fname = data_dir+'id'+suffix
         new_fname = data_dir+'zid'+suffix

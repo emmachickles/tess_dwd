@@ -340,9 +340,9 @@ def calc_sine_fit(t, y, period):
     err = np.mean( ( fitfunc - y ) ** 2)
     return err, fitfunc
     
-def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, suffix='',
+def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_dir=None, suffix='',
              objid=None, objid_type='TICID', bins=60, bls=True, save_npy=False, nearpeak=3000,
-             ra=None, dec=None,
+             ra=None, dec=None, sig=None, wid=None, period=None,
              wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
     '''Plot power spectrum and phase-folded light curve.
@@ -359,8 +359,9 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     # == vetting ===============================================================
 
     # -- peak statistics -------------------------------------------------------
-    peak, sig, wid, f_best, period = \
-        calc_peak_stats(freqs, power, nearpeak=nearpeak)
+    if freqs is not None:
+        peak, sig, wid, f_best, period = \
+            calc_peak_stats(freqs, power, nearpeak=nearpeak)
 
     # -- calculate SNR ---------------------------------------------------------
     if bls:
@@ -385,13 +386,14 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     
     # print('Fold light curve done!')
     # == make plot =============================================================
-    if sig > pow_threshold and snr > snr_threshold and period*1440 < per_threshold and\
-       wid > wid_threshold: 
+    if sig >= pow_threshold and snr >= snr_threshold and period*1440 <= per_threshold and\
+       wid >= wid_threshold: 
 
         # -- initialize figure -------------------------------------------------
         plot_pg=False
-        if len(freqs) < 1e6:
-            plot_pg=True
+        if freqs is not None:
+            if len(freqs) < 1e6:
+                plot_pg=True
 
         if plot_pg:
             fig = plt.figure(figsize=(8, 10), constrained_layout=True)
@@ -442,12 +444,16 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                       rp_ext=rp_ext, ra=ra, dec=dec)
 
         # >> threshold power (50% of peak)
-        ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
-                   power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-        ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
-                   power[peak-wid//2:peak+wid//2], '.r', ms=1)
-        ax0_R.set_xlabel('Frequency [1/days]')
-        ax0_R.set_yticklabels([])
+        if freqs is not None:
+            ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+                       power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+            ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
+                       power[peak-wid//2:peak+wid//2], '.r', ms=1)
+            ax0_R.set_xlabel('Frequency [1/days]')
+            ax0_R.set_yticklabels([])
+        else:
+            ax0_L.set_yticklabels([])                        
+            ax0_R.set_yticklabels([])            
         
         if plot_pg:
             ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
@@ -462,7 +468,6 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
                 ax1.set_ylabel('LS Power')
 
         # -- plot phase curve --------------------------------------------------
-
 
         folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
         shift = np.max(folded_t) - np.min(folded_t)        
@@ -571,7 +576,7 @@ def vet_plot(t, y, freqs, power, q=None, phi0=None, dy=None, output_dir=None, su
     else:
         return sig, wid, period, period_min
 
-            
+    
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
                      ylabel="Relative Flux"):
     shift = np.max(folded_t) - np.min(folded_t)    

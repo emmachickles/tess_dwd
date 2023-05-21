@@ -415,7 +415,7 @@ if len(sys.argv) > 1:
 # -- RUN SETTINGS --------------------------------------------------------------
     
 tica = False
-cam = 2
+cam = 4
 
 for ccd in [1,2,3,4]:
 
