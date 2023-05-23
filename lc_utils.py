@@ -341,7 +341,7 @@ def calc_sine_fit(t, y, period):
     return err, fitfunc
     
 def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             objid=None, objid_type='TICID', bins=60, bls=True, save_npy=False, nearpeak=3000,
+             objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
              ra=None, dec=None, sig=None, wid=None, period=None,
              wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
@@ -397,31 +397,35 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
 
         if plot_pg:
             fig = plt.figure(figsize=(8, 10), constrained_layout=True)
-            gs = fig.add_gridspec(nrows=4, ncols=2)
+            gs = fig.add_gridspec(nrows=5, ncols=2,
+                                  height_ratios=[1,1,2,2,2])
             ax0_L = fig.add_subplot(gs[0, 0])
-            ax0_R = fig.add_subplot(gs[0, 1])
-            ax1 = fig.add_subplot(gs[1, :])            
-            # ax2 = fig.add_subplot(gs[2, :])
-            ax2_L = fig.add_subplot(gs[1, 0])    
-            ax2_R = fig.add_subplot(gs[1, 1])                            
+            ax1_L = fig.add_subplot(gs[1, 0])
+            ax0_R = fig.add_subplot(gs[0:2, 1])
+            ax1 = fig.add_subplot(gs[2, :])            
+            ax2 = fig.add_subplot(gs[3, :])
+            # ax2_L = fig.add_subplot(gs[3, 0])    
+            # ax2_R = fig.add_subplot(gs[3, 1])                            
+            if bls:
+                ax3_L = fig.add_subplot(gs[4, 0])
+                ax3_R = fig.add_subplot(gs[4, 1])
+            else:
+                ax3 = fig.add_subplot(gs[4, :])            
+        else:
+            fig = plt.figure(figsize=(8, 8), constrained_layout=True)
+            gs = fig.add_gridspec(nrows=4, ncols=2,
+                             height_ratios=[1,1,2,2])
+            ax0_L = fig.add_subplot(gs[0, 0])
+            ax1_L = fig.add_subplot(gs[1, 0])
+            ax0_R = fig.add_subplot(gs[0:2, 1])
+            ax2 = fig.add_subplot(gs[2, :])
+            # ax2_L = fig.add_subplot(gs[1, 0])    
+            # ax2_R = fig.add_subplot(gs[1, 1])                
             if bls:
                 ax3_L = fig.add_subplot(gs[3, 0])
                 ax3_R = fig.add_subplot(gs[3, 1])
             else:
-                ax3 = fig.add_subplot(gs[3, :])            
-        else:
-            fig = plt.figure(figsize=(8, 8), constrained_layout=True)
-            gs = fig.add_gridspec(nrows=3, ncols=2)
-            ax0_L = fig.add_subplot(gs[0, 0])
-            ax0_R = fig.add_subplot(gs[0, 1])
-            # ax2 = fig.add_subplot(gs[1, :])
-            ax2_L = fig.add_subplot(gs[1, 0])    
-            ax2_R = fig.add_subplot(gs[1, 1])                
-            if bls:
-                ax3_L = fig.add_subplot(gs[2, 0])
-                ax3_R = fig.add_subplot(gs[2, 1])
-            else:
-                ax3 = fig.add_subplot(gs[2, :])
+                ax3 = fig.add_subplot(gs[3, :])
 
         # -- title -------------------------------------------------------------
         if bls:
@@ -445,15 +449,15 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
 
         # >> threshold power (50% of peak)
         if freqs is not None:
-            ax0_R.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+            ax1_L.plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
                        power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
-            ax0_R.plot(freqs[peak-wid//2:peak+wid//2],
+            ax1_L.plot(freqs[peak-wid//2:peak+wid//2],
                        power[peak-wid//2:peak+wid//2], '.r', ms=1)
-            ax0_R.set_xlabel('Frequency [1/days]')
-            ax0_R.set_yticklabels([])
+            ax1_L.set_xlabel('Frequency [1/days]')
+            ax1_L.set_yticklabels([])
         else:
-            ax0_L.set_yticklabels([])                        
-            ax0_R.set_yticklabels([])            
+            ax1_L.set_xticklabels([])
+            ax1_L.set_yticklabels([]) 
         
         if plot_pg:
             ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
@@ -472,31 +476,31 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
         folded_t, folded_dy = np.array(folded_t), np.array(folded_dy)
         shift = np.max(folded_t) - np.min(folded_t)        
         if type(bins) != type(None):
-            ax2_L.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
+            ax2.errorbar(folded_t*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
-            ax2_L.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
+            ax2.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy,
                            fmt='.k', ms=1, elinewidth=1)
 
         else:
-            ax2_L.plot(folded_t*1440, folded_y, '.k', ms=1)
-            ax2_L.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
-        ax2_L.set_xlabel('Time [minutes]')
-        ax2_L.set_ylabel('Relative Flux')
-        ax2_R.set_ylim(ax2_L.get_ylim())
-        ax2_R.set_yticklabels([])
-        ax2_R.set_xlabel('Time [minutes]')
-        folded_t2, folded_y2, folded_dy2 = bin_timeseries(t%(period*2), y, bins, dy=dy)
+            ax2.plot(folded_t*1440, folded_y, '.k', ms=1)
+            ax2.plot((folded_t+shift)*1440, folded_y, '.k', ms=1)            
+        ax2.set_xlabel('Time [minutes]')
+        ax2.set_ylabel('Relative Flux')
+        ax0_R.set_ylim(ax2.get_ylim())
+        ax0_R.set_yticklabels([])
+        ax0_R.set_xlabel('Time [minutes]')
+        folded_t2, folded_y2, folded_dy2 = bin_timeseries(t%(period*2), y, int(bins/2), dy=dy)
         folded_t2, folded_dy2 = np.array(folded_t2), np.array(folded_dy2)
         shift = np.max(folded_t2) - np.min(folded_t2)
         if type(bins) != type(None):
-            ax2_R.errorbar(folded_t2*1440, folded_y2, yerr=folded_dy2,
+            ax0_R.errorbar(folded_t2*1440, folded_y2, yerr=folded_dy2,
                            fmt='.k', ms=1, elinewidth=1)
-            ax2_R.errorbar((folded_t2+shift)*1440, folded_y2, yerr=folded_dy2,
+            ax0_R.errorbar((folded_t2+shift)*1440, folded_y2, yerr=folded_dy2,
                            fmt='.k', ms=1, elinewidth=1)
 
         else:
-            ax2_R.plot(folded_t2*1440, folded_y2, '.k', ms=1)
-            ax2_R.plot((folded_t2+shift)*1440, folded_y2, '.k', ms=1)                    
+            ax0_R.plot(folded_t2*1440, folded_y2, '.k', ms=1)
+            ax0_R.plot((folded_t2+shift)*1440, folded_y2, '.k', ms=1)                    
         
         
         # -- plot full light curve ---------------------------------------------
