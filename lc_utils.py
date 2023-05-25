@@ -193,7 +193,8 @@ def normalize_lc(y, dy=None):
         dy = dy/med
     if np.min(y) == 0.:
         y += 0.01
-        dy += 0.01
+        if dy is not None:
+            dy += 0.01
     return y, dy
 
 def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=None,
@@ -398,7 +399,8 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
         if plot_pg:
             fig = plt.figure(figsize=(8, 10), constrained_layout=True)
             gs = fig.add_gridspec(nrows=5, ncols=2,
-                                  height_ratios=[1,1,2,2,2])
+                                  height_ratios=[1.2,0.8,2,2,2],
+                                  width_ratios=[1,1])
             ax0_L = fig.add_subplot(gs[0, 0])
             ax1_L = fig.add_subplot(gs[1, 0])
             ax0_R = fig.add_subplot(gs[0:2, 1])
@@ -575,6 +577,8 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
     rp = np.round(rp, 2)
     nt = np.int64(nt)
     dphi = np.round(dphi, 5)
+
+
     if bls:
         return sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
     else:
@@ -690,6 +694,7 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     '''Plot white dwarf track and surrounding areas.'''
     from astropy.io import fits
     import time
+    import pandas as pd
 
     source_id = np.empty(0)
     bp_rp = np.empty(0)
@@ -728,12 +733,20 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
         Gaia.MAIN_GAIA_TABLE = "gaiadr3.gaia_source"
         coord = SkyCoord(ra=ra, dec=dec,
                          unit=(u.degree, u.degree), frame='icrs')
-        j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
-        if len(j.get_results()['phot_g_mean_mag']) > 0 and \
-           len(j.get_results()['bp_rp']) > 0:
-            c_targ = j.get_results()['bp_rp'][0]        
-            g_targ = j.get_results()['phot_g_mean_mag'][0]
-            p_targ = j.get_results()['parallax'][0]
+        width, height = u.Quantity(2, u.arcsec), u.Quantity(2, u.arcsec)
+        r = Gaia.query_object_async(coordinate=coord, width=width, height=height)
+        
+        # j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
+        if len(r['phot_g_mean_mag']) > 0 and len(r['bp_rp']) > 0:
+
+        # if len(j.get_results()['phot_g_mean_mag']) > 0 and \
+        #    len(j.get_results()['bp_rp']) > 0:
+            # c_targ = j.get_results()['bp_rp'][0]        
+            # g_targ = j.get_results()['phot_g_mean_mag'][0]
+            # p_targ = j.get_results()['parallax'][0]
+            c_targ = r['bp_rp'][0]
+            g_targ = r['phot_g_mean_mag'][0]
+            p_targ = r['parallax'][0]
             if str(p_targ) == '--':
                 m_targ = np.nan
             else:
@@ -763,8 +776,9 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
         # ax.set_ylim([15.5, 4])
 
         # start=time.time()
-        _ = ax.hist2d(bp_rp, abs_mag, bins=1000, range=[[-0.6, 1.9], [4, 15.5]], density=True,
+        _ = ax.hist2d(bp_rp, abs_mag, bins=200, range=[[-0.6, 1.9], [4, 15.5]], density=True,
                       cmin=0.03)
+        # ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
         ax.set_xlabel('Gaia BP-RP')
         ax.set_ylabel('Absolute Magnitude (Gaia G)')
         ax.invert_yaxis()
@@ -774,9 +788,13 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
                 "\ng_mean_mag: "+str(round(g_targ, 2))+\
                 "\nparallax: "+str(round(p_targ,2))+\
                 "\nabs_mag: "+str(round(m_targ, 2)),
-                ha="right", va='top',transform=ax.transAxes)                 
+                ha="right", va='top',transform=ax.transAxes,
+                fontsize=8)
     # end=time.time()
     # print(end-start)
+    # ax.xticklabels([])
+    # ax.yticklabels([])
+    # ax.xaxis.tick_top()
     
     
 def hr_diagram(gaia_tab, ra, dec, ax):
@@ -805,12 +823,19 @@ def hr_diagram(gaia_tab, ra, dec, ax):
     Gaia.MAIN_GAIA_TABLE = "gaiadr3.gaia_source"
     coord = SkyCoord(ra=ra, dec=dec,
                      unit=(u.degree, u.degree), frame='icrs')
-    j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
-    if len(j.get_results()['phot_g_mean_mag']) > 0 and \
-       len(j.get_results()['bp_rp']) > 0:
-        bprp_targ = j.get_results()['bp_rp'][0]        
-        apparent_mag = j.get_results()['phot_g_mean_mag'][0]
-        parallax = j.get_results()['parallax'][0]
+    width, height = u.Quantity(2, u.arcsec), u.Quantity(2, u.arcsec)
+    r = Gaia.query_object_async(coordinate=coord, width=width, height=height)
+    # j = Gaia.cone_search_async(coord, radius=u.Quantity(3, u.arcsec))
+    # if len(j.get_results()['phot_g_mean_mag']) > 0 and \
+    #    len(j.get_results()['bp_rp']) > 0:
+    if len(r['phot_g_mean_mag']) > 0 and len(r['bp_rp']) > 0:
+        # bprp_targ = j.get_results()['bp_rp'][0]        
+        # apparent_mag = j.get_results()['phot_g_mean_mag'][0]
+        # parallax = j.get_results()['parallax'][0]
+        print(r['DESIGNATION'][0])
+        bprp_targ = r['bp_rp'][0]
+        apparent_mag = r['phot_g_mean_mag'][0]
+        parallax = r['parallax'][0]
         if str(parallax) == '--':
             abs_mag = None
             ax.text(0.95, 0.05, "bp_rp: "+str(bprp_targ)+\

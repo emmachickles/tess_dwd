@@ -5,11 +5,19 @@ detrend = "wotan"
 wind = 0.1
 pmin = 400 / 60 
 # pmax = 0.15
+pmax = 10
 qmin = 0.01
 qmax = 0.15
 
-wid_threshold=6
-pow_threshold=25
+# wid_threshold=6
+# pow_threshold=25
+wid_threshold = 0
+pow_threshold = 0
+objid_type = None
+
+wd_tab= "/scratch/echickle/WDs.txt"
+wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
 
 def run_process(p):
     sector, cam, ccd, ticid, data_dir, bls_dir = p
@@ -25,6 +33,7 @@ def run_process(p):
     os.makedirs(bls_dir, exist_ok=True)
 
     # >> load data
+    ticid = np.int64(ticid)
     suffix = "-{}-{}.npy".format(cam, ccd)
     y = np.load(data_dir+'lc'+suffix)
     t = np.load(data_dir+'ts'+suffix)
@@ -32,6 +41,7 @@ def run_process(p):
     ticid_ccd = np.load(data_dir+'id'+suffix).astype('int')
     ind = np.nonzero(ticid_ccd == ticid)[0][0]
     y, coord = y[ind], coord[ind]
+    ra, dec = coord[0], coord[1]
     print('Loaded S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
 
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
@@ -62,22 +72,29 @@ def run_process(p):
                  str(cam)+'_ccd_'+str(ccd)+\
                  '_ra_{}_dec_{}_'.format(coord[0], coord[1])
         res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                           objid=ticid, 
-                           suffix=suffix, bins=100, save_npy=False,
-                           pow_threshold=pow_threshold, wid_threshold=wid_threshold)
-        return [ticid, coord[0], coord[1]] + list(res)
+                           objid=ticid, objid_type=objid_type, suffix=suffix, 
+                           ra=ra, dec=dec,
+                           pow_threshold=pow_threshold, wid_threshold=wid_threshold,
+                           wd_main=wd_main, rp_ext=rp_ext, wd_tab=wd_tab)
+        print(res)
+        return [ticid, ra, dec] + list(res)
 
     except:
-        res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
-        import pdb 
-        pdb.set_trace()
+        print('!! Failed !!')
+        res = [ticid, ra, dec] + list(np.zeros(12))
         return res
 
 if __name__ == '__main__':
 
     import sys
-    sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
-    ticid = int(sys.argv[4])
+    # sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+    # ticid = int(sys.argv[4])
+    sector, cam, ccd = 61, 1, 1
+    ticid = 178366477
+    data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc-ZTF/"
+    output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+    bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
 
-    p = [sector, cam, ccd, ticid]
-    run_process(p)
+    p = [sector, cam, ccd, ticid, data_dir, bls_dir]
+    res = run_process(p)
+    print(res)
