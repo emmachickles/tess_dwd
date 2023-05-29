@@ -492,7 +492,6 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
         ax0_R.set_yticklabels([])
         ax0_R.set_xlabel('Time [minutes]')
         folded_t2, folded_y2, folded_dy2 = bin_timeseries(t%(period*2), y, int(bins/2), dy=dy)
-        folded_t2, folded_dy2 = np.array(folded_t2), np.array(folded_dy2)
         shift = np.max(folded_t2) - np.min(folded_t2)
         if type(bins) != type(None):
             ax0_R.errorbar(folded_t2*1440, folded_y2, yerr=folded_dy2,
@@ -852,6 +851,69 @@ def hr_diagram(gaia_tab, ra, dec, ax):
                     "\nabs_mag: "+str(round(abs_mag, 2)),
                     horizontalalignment="right", transform=ax.transAxes) 
 
+def plot_signal(t, y, dy, freqs, power, per_true, output_dir, suffix='',
+                nearpeak=3000, bins=100):
+    '''
+    Panels:
+    * BLS peak 
+    * True period peak
+    * Folded light curve on BLS period binned and un binned
+    * Folded light curve on true period binned and unbinned'''
+
+    peak = np.argmax(power)
+    f_best = freqs[peak]
+    per_best=1.0/f_best    
+    
+    fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(8,10))
+
+    ax[0][0].set_title('BLS Period\n'+str(round(per_best*1440., 2))+' min')
+    ax[0][0].plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+               power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+    ax[0][0].set_xlabel('Frequency [1/days]')
+    ax[0][0].set_yticklabels([])
+
+    f_true = 1./per_true
+    peak = np.argmin(np.abs(freqs - f_true))
+    
+    ax[0][1].set_title('True Period\n'+str(round(per_true*1440., 2))+' min')
+    ax[0][1].plot(freqs[max(0,peak-nearpeak):peak+nearpeak],
+               power[max(0,peak-nearpeak):peak+nearpeak], '.k', ms=1)
+    ax[0][1].set_xlabel('Frequency [1/days]')
+    ax[0][1].set_yticklabels([])
+
+    folded_t = t%per_best
+    shift = np.max(folded_t) - np.min(folded_t)
+    ax[1][0].plot(folded_t*1440., y, '.k', ms=1)
+    ax[1][0].plot((folded_t+shift)*1440., y, '.k', ms=1)
+    ax[1][0].set_ylabel('Relative flux')
+    ax[1][0].set_xlabel('Time [minutes]')
+    
+    folded_t, folded_y, folded_dy = bin_timeseries(t%per_best, y, bins, dy=dy)
+    shift = np.max(folded_t) - np.min(folded_t)
+    ax[2][0].errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt='.k', ms=1, elinewidth=1)
+    ax[2][0].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt='.k', ms=1, elinewidth=1)
+    ax[2][0].set_xlabel('Time [minutes]')
+    ax[2][0].set_ylabel('Relative flux')
+
+    folded_t = t%per_true
+    shift = np.max(folded_t) - np.min(folded_t)
+    ax[1][1].plot(folded_t*1440., y, '.k', ms=1)
+    ax[1][1].plot((folded_t+shift)*1440., y, '.k', ms=1)
+    ax[1][1].set_ylabel('Relative flux')
+    ax[1][1].set_xlabel('Time [minutes]')
+    
+    folded_t, folded_y, folded_dy = bin_timeseries(t%per_true, y, bins, dy=dy)
+    shift = np.max(folded_t) - np.min(folded_t)
+    ax[2][1].errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt='.k', ms=1, elinewidth=1)
+    ax[2][1].errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt='.k', ms=1, elinewidth=1)
+    ax[2][1].set_xlabel('Time [minutes]')
+    ax[2][1].set_ylabel('Relative flux')
+
+    fig.tight_layout()
+    fig.savefig(output_dir+'BLS_peak'+suffix+'.png')
+    print('Saved '+output_dir+'BLS_peak'+suffix+'.png')
+    
+            
 def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
                     per,ra,dec,gaia_tab,out_dir,suffix,
                     per_tess=None,per_atlas=None,per_ztf=None,
