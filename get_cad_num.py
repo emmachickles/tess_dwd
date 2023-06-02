@@ -5,8 +5,9 @@ from astropy.io import fits
 import numpy as np
 import pdb
 
-sector = 61
+sector = 63
 data_dir = '/home/echickle/data/s%04d/'%sector
+lc_dir = data_dir+'s%04d-lc-ZTF/'%sector
 curl_f = data_dir + 's%04d/tesscurl_sector_%d_ffic.sh'%(sector,sector)
 # 245700
 
@@ -36,22 +37,27 @@ hdul = fits.open(ffic)
 tstart_o2 = hdul[0].header['TSTART'] 
 ffiindex_o2 = hdul[0].header['FFIINDEX']
 
+# >> get available cam and ccds
+file_names = os.listdir(lc_dir)
+suffix_list = [f[2:] for f in file_names if 'ts' in f]
+
 # >> match
 cadence = 200. / (24*60*60)
-for cam in [1,2,3,4]:
-    for ccd in [1,2,3,4]:
-        ts=np.load(data_dir+'s%04d-lc/ts-%d-%d.npy'%(sector,cam,ccd))
-        pdb.set_trace()
-        cn=[]
-        
-        # >> get orbit gap
-        ind = np.argmax(np.diff(np.sort(ts)))
-        tgap = np.sort(ts)[ind] # >> second orbit has t > tgap
+for suffix in suffix_list:
+    ts=np.load(lc_dir + 'ts'+suffix)
+    pdb.set_trace()
+    print(ts[0])
+    # pdb.set_trace()
+    cn=[]
 
-        for t in ts:
-            if t <= tgap: # >> orbit 1
-                cn.append(ffiindex_o1 + int( (t - tstart_o1) / cadence))
-            else:
-                cn.append(ffiindex_o2 + int( (t - tstart_o2) / cadence))
+    # >> get orbit gap
+    ind = np.argmax(np.diff(np.sort(ts)))
+    tgap = np.sort(ts)[ind] # >> second orbit has t > tgap
 
-        np.save(data_dir+'s%04d-lc/cn-%d-%d.npy'%(sector,cam,ccd), cn)
+    for t in ts:
+        if t <= tgap: # >> orbit 1
+            cn.append(ffiindex_o1 + int( (t - tstart_o1) / cadence))
+        else:
+            cn.append(ffiindex_o2 + int( (t - tstart_o2) / cadence))
+
+    np.save(lc_dir+'cn'+suffix, cn)

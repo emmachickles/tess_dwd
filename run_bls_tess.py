@@ -18,6 +18,7 @@ objid_type = None
 wd_tab= "/scratch/echickle/WDs.txt"
 wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
 rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/home/echickle/data/QLPqflags/"
 
 def run_process(p):
     sector, cam, ccd, ticid, data_dir, bls_dir = p
@@ -44,6 +45,28 @@ def run_process(p):
     ra, dec = coord[0], coord[1]
     print('Loaded S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
 
+    # >> remove nonzero quality flags
+    qflag_dir = qflag_dir+'sec%d/'%sector
+    cn = np.load(data_dir+'cn'+suffix)
+    file_names = os.listdir(qflag_dir)
+    file_names = [f for f in file_names if 'cam%dccd%d'%(cam, ccd) in f]
+    qflag_data = []
+    for f in file_names:
+        qflag_data.extend(np.load(qflag_dir+f))
+    qflag_data = np.array(qflag_dir)
+    bad_inds = np.nonzero(qflag_data[:,0])[0]
+    bad_cadence = qflag_data[:,1][bad_inds]
+    _, comm1, comm2 = np.intersect1d(cn, bad_cadence, return_indices=True)
+
+    print(t.shape)
+    cn = np.delete(cn, comm1)
+    t = np.delete(t, comm1)
+    y = np.delete(y, comm1)
+    print(t.shape)
+    
+    pdb.set_trace()
+
+    # >> detrend and remove outliers
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     if flag:
         res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
