@@ -93,7 +93,7 @@ def get_ztf_lc(ra, dec):
 
     return fnames
 
-def load_ztf_lc(fnames, n_std=5):
+def load_ztf_lc(fnames, n_std=5, clip=True):
     t, y, dy = [], [], []
     
     for i in range(len(fnames)):
@@ -110,21 +110,50 @@ def load_ztf_lc(fnames, n_std=5):
     # inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
     # t, y, dy = t[inds], y[inds], dy[inds]  
 
-    q3, q1 = np.percentile(y, [75 ,25])
-    iqr=(q3-q1)/2
+    if clip:
+        q3, q1 = np.percentile(y, [75 ,25])
+        iqr=(q3-q1)/2
 
-    good_idx=(y-np.median(y))<3*iqr
-    t=t[good_idx]
-    dy=dy[good_idx]
-    y=y[good_idx]
+        good_idx=(y-np.median(y))<3*iqr
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
 
-    good_idx=(np.median(y)-y)<10*iqr
-    t=t[good_idx]
-    dy=dy[good_idx]
-    y=y[good_idx]
+        good_idx=(np.median(y)-y)<10*iqr
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
 
     return t, y, dy
+
+def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True):
+    if ticid is None:
+        from astroquery.mast import Catalogs
+        catalog_data = Catalogs.query_region(f"{ra} {dec}", catalog="TIC", radius=0.001, objectname=False)
+        ticid = int(catalog_data['ID'][0])
+    sectors = list(range(56, 64))
+    sector_targ, cam_targ, ccd_targ = None, None, None
+    for sector in sectors:
+        for cam in [1,2,3,4]:
+            for ccd in [1,2,3,4]:
+                fname = data_dir+'s%04d/s%04d-lc/id-%d-%d.npy'%(sector, sector, cam, ccd)
+                co = np.load(fname)
+                if len(np.where(co == ticid)[0]) > 0:
+                    sector_targ, cam_targ, ccd_targ = sector, cam, ccd
+    if sector_targ is None:
+        print('TESS light curve not found!')
+    else:
+        return ticid, sector_targ, cam_targ, ccd_targ
+
+def load_tess_lc(data_dir, ticid, sector, cam, ccd):
+    t = np.load(data_dir+'s%04d/s%04d-lc/id-%d-%d.npy'%(sector, sector, cam, ccd))
+    co = np.load(data_dir+'s%04d/s%04d-lc/co-%d-%d.npy'%(sector, sector, cam, ccd))
+    ind = np.where(co == ticid)[0]
+    y = np.load(data_dir+'s%04d/s%04d-lc/lc-%d-%d.npy'%(sector, sector, cam, ccd))[ind]
+    return t, y
         
+        
+
 def load_hipercam(logfile):
     '''Loads logfile produced by HiPERCAM reduce pipeline. 
     5 CCDs: u, g, r, i, z bands.'''
@@ -276,7 +305,9 @@ def calc_snr(t, y, period, q, phi0):
     near_transit = np.abs(phi) < 1.5*q
     # >> other out-of-eclipse datapoints:
     out_transit = np.abs(phi) > q
- 
+    # >> number of in-eclipse datapoints
+    nt = np.count_nonzero(transit)
+    
     # >> get delta (depth of transit)
     # avg_out = np.mean(y[out_transit])
     # avg_in = np.mean(y[transit])
@@ -285,19 +316,21 @@ def calc_snr(t, y, period, q, phi0):
     # err = np.sqrt(err_out**2 + err_in**2)
     
     if np.count_nonzero(transit) > 0:
-        avg_out = np.median(y[out_transit])
-        avg_in = np.median(y[transit])
+        avg_out = np.mean(y[out_transit])
+        avg_in = np.mean(y[transit])
+        err = np.std(y[out_transit]) / np.sqrt(nt)
+        # avg_out = np.median(y[out_transit])
+        # avg_in = np.median(y[transit])
         # err_out = median_abs_deviation(y[out_transit])
         # err_in = median_abs_deviation(y[transit])
         # err = np.sqrt(err_out**2 + err_in**2)
-        err = median_abs_deviation(y[out_transit])
+        # err = median_abs_deviation(y[out_transit])
 
         delta = np.abs(avg_out - avg_in)
         snr = delta/err
     else:
         snr = 0.
 
-    nt = np.count_nonzero(transit)
     dphi = np.max( np.diff( np.sort(phi) ) )
     return snr, phi, transit, near_transit, epo_TJD, nt, dphi
 
@@ -915,9 +948,9 @@ def plot_signal(t, y, dy, freqs, power, per_true, output_dir, suffix='',
     
             
 def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
-                    per,ra,dec,gaia_tab,out_dir,suffix,
+                    ra,dec,gaia_tab,wd_tab,wd_main,rp_ext,out_dir,suffix,per=None,
                     per_tess=None,per_atlas=None,per_ztf=None,
-                    bins=100,n_std=5,wind=0.1,qmin=0.01,
+                    bins=100,n_std=5,wind=0.1,qmin=0.01,clip=True,
                     qmax=0.15,bls=False):
 
     import pandas as pd
@@ -952,18 +985,33 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     if per_tess is None: # -- tess period finding ------------------------------
         dy = np.ones(y.shape) * 0.1
         if bls:
+            freqs_to_remove = []
+
+            df = 0.1
+            freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
+            freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
+            freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
+            freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
+            freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
+            freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
+            freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
+            freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+            
             t, y, dy, per_tess, bls_power_best, freqs, power, q, phi0 = \
-                BLS(t,y,dy,pmin=400/60,pmax=10,qmin=qmin,qmax=qmax,remove=True)
+                BLS(t,y,dy,pmin=400/60,pmax=10,qmin=qmin,qmax=qmax,freqs_to_remove=freqs_to_remove)
         else:
             _, _, _, per_tess, ls_power_best, freqs, power = \
                 LS_Astropy(t,y,dy,pmax=10)        
         prefix1 = 'TESS_'
         vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                 objid=ticid, suffix='_'+suffix)
+                 objid=ticid, suffix='_'+suffix, wd_main=wd_main, rp_ext=rp_ext,
+                 wd_tab=wd_tab)
 
         ax4.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
         ax4.set_xlabel('Period [minutes]')
 
+        if per is None:
+            per = per_tess
         centr = np.argmin(np.abs(freqs - 1/per))
         ax7.axvline(x=1/per, color='r', linestyle='dashed')
         ax7.plot(freqs[max(0,centr-3000):centr+3000],
@@ -987,18 +1035,26 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     # -- atlas phase curve ------------------------------------------------------
 
     if type(fname_atlas) == type(""):
-        t, y, dy, _, _ = load_atlas_lc(fname_atlas)
+        t, y, dy, _, _ = load_atlas_lc(fname_atlas, clip=clip)
         if per_atlas is None: # -- atlas period finding ------------------------
             if bls:
+                freqs_to_remove = []
+                df = 0.05
+                freqs_to_remove.append([1 - df, 1 + df])
+                freqs_to_remove.append([1/2. - df, 1/2. + df])
+                freqs_to_remove.append([1/4. - df, 1/4. + df])    
+
+                
                 t, y, dy, per_atlas, bls_power_best, freqs, power, q, phi0 = \
-                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
+                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,freqs_to_remove=freqs_to_remove)
             else:
                 _, _, _, per_atlas, ls_power_best, freqs, power = \
                     LS_Astropy(t,y,dy,pmax=10)     
 
             prefix1 = 'ATLAS_'
             vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                     objid=ticid, dy=dy, suffix='_'+suffix)
+                     objid=ticid, dy=dy, suffix='_'+suffix, wd_main=wd_main,
+                     rp_ext=rp_ext, wd_tab=wd_tab)
 
             ax5.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
             ax5.set_xlabel('Period [minutes]')
@@ -1022,17 +1078,24 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     # -- ztf phase curve -------------------------------------------------------
 
     if len(fnames_ztf) > 0:
-        t, y, dy = load_ztf_lc(fnames_ztf)
+        t, y, dy = load_ztf_lc(fnames_ztf, clip=clip)
         if per_ztf is None: # -- ztf period finding ----------------------------
             if bls:
+                freqs_to_remove = []
+                df = 0.05
+                freqs_to_remove.append([1 - df, 1 + df])
+                freqs_to_remove.append([1/2. - df, 1/2. + df])
+                freqs_to_remove.append([1/4. - df, 1/4. + df])    
+                
                 t, y, dy, per_ztf, bls_power_best, freqs, power, q, phi0 = \
-                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
+                    BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,freqs_to_remove=freqs_to_remove)
             else:
                 _, _, _, per_ztf, ls_power_best, freqs, power = \
                     LS_Astropy(t,y,dy,pmax=pmax)                    
             prefix1 = 'ZTF_'
             vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+prefix1,
-                     objid=ticid, dy=dy, plot_threshold=0, suffix='_'+suffix)
+                     objid=ticid, dy=dy, suffix='_'+suffix,
+                     wd_main=wd_main, rp_ext=rp_ext, wd_tab=wd_tab)
 
             ax6.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
             ax6.set_xlabel('Period [minutes]')

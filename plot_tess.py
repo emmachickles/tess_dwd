@@ -42,7 +42,7 @@ qmax = 0.15
 # ticid = np.delete(ticid, comm1) 
 
 # !!
-ticid = ['808364853']
+ticid = ['767706310']
 
 for i in range(len(ticid)):
     print(str(i)+'/'+str(len(ticid)))

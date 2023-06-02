@@ -183,8 +183,8 @@ def source_list(f,catalog,ticid, tica=False):
 
     if tica:
         hd2=hdu_list[0].header
-        t=hd['MJD-BEG']+100/86400
-        # t = hd['STARTTJD'] # in TJD        
+        # t=hd['MJD-BEG']+100/86400
+        t = hd['STARTTJD'] # in TJD        
         dt = hdu_list[0].data    
     else:
         hd2=hdu_list[1].header
