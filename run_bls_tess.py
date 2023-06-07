@@ -52,7 +52,7 @@ def run_process(p):
     file_names = [f for f in file_names if 'cam%dccd%d'%(cam, ccd) in f]
     qflag_data = []
     for f in file_names:
-        qflag_data.extend(np.load(qflag_dir+f))
+        qflag_data.extend(np.loadtxt(qflag_dir+f))
     qflag_data = np.array(qflag_dir)
     bad_inds = np.nonzero(qflag_data[:,0])[0]
     bad_cadence = qflag_data[:,1][bad_inds]
