@@ -251,6 +251,7 @@ fig4.savefig(out_dir+'gmag_per_DWD_zoom.png', dpi=300)
 # -- JVR -----------------------------------------------------------------------
 
 ra, dec, pow, snr, dphi, wid, nt, per = [np.empty(0)]*8
+fnames_jvr = []
 
 # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
 for sector in [56, 57, 58, 59, 60, 61, 62, 63]:
@@ -268,6 +269,16 @@ for sector in [56, 57, 58, 59, 60, 61, 62, 63]:
         wid = np.append(wid, np.int64(cat[5]))
         nt = np.append(nt, np.int64(cat[12]))
         per = np.append(per, cat[6])
+
+        suffix = f.split('.')[0][-4:]
+        plot_dir =  data_dir + 's%04d-ZTF/'%sector + 's%04d-bls'%sector+suffix+'/'
+        plot_fnames = np.array(os.listdir(plot_dir))
+        plot_ticid = np.array([int(plot.split('_')[8][3:]) for plot in plot_fnames])
+        for ticid in cat_ticid:
+            ind = np.nonzero(plot_ticid == ticid)[0][0]
+            fnames_jvr.append(plot_dir+plot_fnames[ind])
+
+fnames_jvr = np.array(fnames_jvr)
 
 co = SkyCoord(ra=ra, dec=dec, unit=(u.degree, u.degree), frame='icrs')
 co_ztf = SkyCoord(ra=ra_ztf, dec=dec_ztf, unit=(u.degree, u.degree), frame='icrs')
@@ -328,6 +339,63 @@ fig4.savefig(out_dir+'gmag_per_JVR.png', dpi=300)
 ax4.set_ylim([0, 0.4])
 fig4.savefig(out_dir+'gmag_per_JVR_zoom.png', dpi=300)
 
+
+def get_stellar_density(ra, dec):
+    from astroquery.vizier import Vizier
+    import astropy.units as u
+
+    # Set the coordinates and search radius
+    coords = f"{ra} {dec}"
+    radius = 1 * u.arcmin # Search radius in arcminutes
+
+    # Query the VizieR database (using the Gaia catalog)
+    catalog = "I/345/gaia2"
+    v = Vizier(columns=['**'], catalog=catalog)
+    result = v.query_region(coords, radius=radius, catalog=catalog)
+
+    # Get the number of stars within the search radius
+    if len(result[0]) == 0:
+        star_count, density = np.nan, np.nan
+    else:
+        star_count = len(result[0])
+
+        # Calculate the stellar density (assuming uniform area)
+        density = star_count / (3.14 * radius**2)
+        density = density.value
+
+    return density
+
+# stellar_density = []
+# for i in range(len(ra)):
+#     stellar_density.append(get_stellar_density(ra[i], dec[i]))
+# stellar_density = np.array(stellar_density)
+# np.savetxt(data_dir+'stellar_density_JVR.txt', stellar_density)
+stellar_density = np.loadtxt(data_dir + 'stellar_density_JVR.txt')
+
+
+fig4, ax4 = plt.subplots()
+ax4.set_xlabel('Stellar density within 1 arcmin')
+ax4.set_ylabel('Period [days]')
+ax4.plot(stellar_density[match], per[match], '<b', label='JVR-recovered')
+ax4.plot(stellar_density[~match], per_ztf[~match], 'Xr', label='JVR-unrecovered\nTrue period')
+ax4.plot(stellar_density[~match], per[~match], 'Xm', label='JVR-unrecovered\nBLS period')
+ax4.legend()
+fig4.savefig(out_dir+'stellar_density_per_JVR.png', dpi=300)
+ax4.set_ylim([0, 0.4])
+fig4.savefig(out_dir+'stellar_density_per_JVR_zoom.png', dpi=300)
+
+# >> inspect BLS plots for unrecovered JVR 
+os.makedirs(out_dir+'unrecovered_JVR/', exist_ok=True)
+for f in fnames_jvr[~match]:
+    os.system('cp '+f+' '+out_dir+'unrecovered_JVR/')
+plot_dirs = np.array([fn.split('/')[4] for fn in fnames_jvr[~match]])
+labels, counts = np.unique(plot_dirs, return_counts=True)
+plt.figure(figsize=(10,6))
+x = range(len(labels))
+plt.bar(x, counts)
+_ = plt.xticks(x, labels, rotation='vertical')
+plt.tight_layout() 
+plt.savefig(out_dir+'unrecovered_JVR_bar.png')
 
 # -- save figures --------------------------------------------------------------
 

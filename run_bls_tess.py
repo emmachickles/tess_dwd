@@ -18,7 +18,7 @@ objid_type = None
 wd_tab= "/scratch/echickle/WDs.txt"
 wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
 rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
-qflag_dir = "/home/echickle/data/QLPqflags/"
+qflag_dir = "/scratch/echickle/QLPqflags/"
 
 def run_process(p):
     sector, cam, ccd, ticid, data_dir, bls_dir = p
@@ -36,7 +36,8 @@ def run_process(p):
     # >> load data
     ticid = np.int64(ticid)
     suffix = "-{}-{}.npy".format(cam, ccd)
-    y = np.load(data_dir+'lc'+suffix)
+    # y = np.load(data_dir+'lc'+suffix)
+    y = np.load(data_dir+'lc-2-2-ap1.1-in1.8-out2.3.npy')
     t = np.load(data_dir+'ts'+suffix)
     coord = np.load(data_dir+'co'+suffix)
     ticid_ccd = np.load(data_dir+'id'+suffix).astype('int')
@@ -46,25 +47,21 @@ def run_process(p):
     print('Loaded S{}-{}-{} TIC{}'.format(sector, cam, ccd, ticid))
 
     # >> remove nonzero quality flags
-    qflag_dir = qflag_dir+'sec%d/'%sector
+    sector_dir = qflag_dir + 'sec%d/' % sector
     cn = np.load(data_dir+'cn'+suffix)
-    file_names = os.listdir(qflag_dir)
+    file_names = os.listdir(sector_dir)
     file_names = [f for f in file_names if 'cam%dccd%d'%(cam, ccd) in f]
     qflag_data = []
     for f in file_names:
-        qflag_data.extend(np.loadtxt(qflag_dir+f))
-    qflag_data = np.array(qflag_dir)
-    bad_inds = np.nonzero(qflag_data[:,0])[0]
-    bad_cadence = qflag_data[:,1][bad_inds]
+        qflag_data.extend(np.loadtxt(sector_dir+f))
+    qflag_data = np.array(qflag_data)
+    bad_inds = np.nonzero(qflag_data[:,1])[0]
+    bad_cadence = qflag_data[:,0][bad_inds]
     _, comm1, comm2 = np.intersect1d(cn, bad_cadence, return_indices=True)
 
-    print(t.shape)
     cn = np.delete(cn, comm1)
     t = np.delete(t, comm1)
     y = np.delete(y, comm1)
-    print(t.shape)
-    
-    pdb.set_trace()
 
     # >> detrend and remove outliers
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
@@ -109,9 +106,7 @@ def run_process(p):
 
 if __name__ == '__main__':
 
-    import sys
-    # sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
-    # ticid = int(sys.argv[4])
+    import sys, pdb
     sector, cam, ccd = 61, 1, 1
     ticid = 178366477
     data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc-ZTF/"
