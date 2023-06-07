@@ -5,13 +5,14 @@ import multiprocessing
 from multiprocessing import Pool
 from run_bls_tess import run_process
 
-sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+# sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+sector, cam, ccd = 56, 2, 2
 
 # output_dir = "/scratch/echickle/s%04d/"%sector
-output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+output_dir = "/scratch/echickle/s%04d-ZTF-ap/"%sector
 
 # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
+data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF-ap/"%sector
 # data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
 
 bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
