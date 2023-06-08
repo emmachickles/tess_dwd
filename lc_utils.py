@@ -214,16 +214,20 @@ def bin_timeseries(t, y, bins, dy=None):
     return np.array(t_binned), np.array(y_binned), np.array(dy_binned)
 
 def normalize_lc(y, dy=None):
-    if np.min(y) < 0:
-        y -= np.min(y)
     med = np.median(y)
     y = y/med
     if dy is not None:
         dy = dy/med
+
+    if np.min(y) < 0:
+        y -= np.min(y)
+    
     if np.min(y) == 0.:
         y += 0.01
+        y = y/1.01
         if dy is not None:
-            dy += 0.01
+            dy = dy/1.01
+        
     return y, dy
 
 def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=None,
@@ -240,10 +244,25 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=
     # >> remove nans
     inds = np.nonzero(~np.isnan(y))
     t, y = t[inds], y[inds]
-
     if dy is not None:
         dy = dy[inds]
 
+    # >> Normalize light curve
+    y, dy = normalize_lc(y, dy)
+
+    # >> detrending
+    if detrend == "polyfit":
+        pval = np.polyfit(t, y, poly_deg)
+        y_poly = np.polyval(pval, t)
+        y = y - y_poly
+        y += np.median(y_poly)    
+    if detrend != "polyfit":
+        y = flatten(t, y, window_length=wind, method='biweight')
+        inds = np.nonzero(~np.isnan(y))
+        t, y = t[inds], y[inds]
+        if dy is not None:
+            dy = dy[inds]
+            
     # >> sigma-clip         
     med = np.median(y)
     std = np.std(y)
@@ -252,28 +271,11 @@ def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=
     if dy is not None:
         dy = dy[inds]    
 
-    if detrend == "polyfit":
-        pval = np.polyfit(t, y, poly_deg)
-        y_poly = np.polyval(pval, t)
-        y = y - y_poly
-        y += np.median(y_poly)
-
     if y.shape[0] < lim:
         flag = True
         if dy is not None:
             return t, y, dy, flag
         return t, y, flag
-            
-    # >> normalize
-    y, dy = normalize_lc(y, dy)
-
-    # >> detrending 
-    if detrend != "polyfit":
-        y = flatten(t, y, window_length=wind, method='biweight')
-        inds = np.nonzero(~np.isnan(y))
-        t, y = t[inds], y[inds]
-        if dy is not None:
-            dy = dy[inds]
     
     if y.shape[0] < lim:
         flag = True

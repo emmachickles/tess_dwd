@@ -245,16 +245,19 @@ def get_flux(sky_aperture, background, wcs, image):
     pix_aperture = sky_aperture.to_pixel(wcs=wcs)
     pix_annulus = background.to_pixel(wcs=wcs)
 
+    sky_area = np.pi * pix_aperture.r**2
+    bkg_area = np.pi * (pix_annulus.r_out**2 - pix_annulus.r_in**2)
+    
     sky_stats = ApertureStats(image, pix_aperture)
     bkg_stats = ApertureStats(image, pix_annulus)
 
-    sky_area = sky_stats.sum_aper_area.value
-    bkg_area = bkg_stats.sum_aper_area.value
+    # sky_area = sky_stats.sum_aper_area.value
+    # bkg_area = bkg_stats.sum_aper_area.value
 
-    phot_bkgsub = sky_stats.sum - bkg_stats.median * sky_area    
+    # phot_bkgsub = sky_stats.sum - bkg_stats.median * sky_area    
     # phot_bkgsub = sky_stats.sum - bkg_stats.mean * sky_area
-    # norm = bkg_area / sky_area
-    # phot_bkgsub = sky_stats.sum - bkg_stats.sum / norm # background-subtracted flux
+    norm = bkg_area / sky_area
+    phot_bkgsub = sky_stats.sum - bkg_stats.sum / norm # background-subtracted flux
     if np.count_nonzero(np.isnan(phot_bkgsub)) > 0:
         pdb.set_trace()
     return phot_bkgsub
@@ -361,7 +364,8 @@ def visualize_flux(sky_aperture, background, wcs, image, phot_bkgsub, save_dir, 
         height = 1.5 * background.r_out
         gaia_sources = Gaia.query_object(coord, width=width, height=height)
         gaia_sources.sort('phot_g_mean_mag')
-        
+
+        pdb.set_trace()
         # Plot Gaia sources as text on the subplot
         for source in gaia_sources[:5]:
             ra = source['ra']
@@ -386,7 +390,16 @@ def visualize_flux(sky_aperture, background, wcs, image, phot_bkgsub, save_dir, 
     # plt.subplots_adjust(wspace=0.2, hspace=0.3)        
     plt.savefig(os.path.join(save_dir, 'flux_visualization_subplot'+suffix+'.png'))
     print(os.path.join(save_dir, 'flux_visualization_subplot'+suffix+'.png'))
+    pdb.set_trace()
     plt.close()
+
+# def barycentric_correction_test(f, save_dir):
+#     hdu_list = fits.open(f)
+#     tstart = hdu_list[1].header['TSTART']
+#     barycorr = hdu_list[1].header['BARYCORR']
+#     tsat = tstart - barycorr
+#     btc_col = hdu_list[1].header['BTC_PIX1'] # reference col for barycentric time correction
+#     btc_row = hdu_list[1].header['BTC_PIX2'] # reference row for barycentric time correction
     
 def process(f,sky_aperture,background,central_coord, tica=True, save_dir=None):    
     hdu_list = fits.open(f)
@@ -459,24 +472,22 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
                                         N_in*21*u.arcsec,N_out*21*u.arcsec)    
     n_iter = 0
     failed_inds = []
-    for f in p:
-        t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir) 
-        ts.append(t)
-        cadence_list.append(cn)
-        LC.append(fluxes)
+    for i, f in enumerate(p): 
+        # t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir) 
+        # ts.append(t)
+        # cadence_list.append(cn)
+        # LC.append(fluxes)
         
-        # try:
-        #     t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir)  
-        #     ts.append(t)
-        #     cadence_list.append(cn)
-        #     LC.append(fluxes)
-        # except:
-        #     print('Failed '+str(n_iter))
-        #     failed_inds.append(n_iter)
-        if n_iter // 10:
-            print(n_iter)
-
-        n_iter += 1
+        try:
+            t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir)  
+            ts.append(t)
+            cadence_list.append(cn)
+            LC.append(fluxes)
+        except:
+            print('Failed '+str(i))
+            failed_inds.append(i)
+            
+        print(i)
 
         # if n_iter // 10: # >> save intermediate products
         #     np.save(out_dir+'ts'+suffix+'.npy', np.array(ts))
@@ -536,7 +547,9 @@ sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
 
 # out_dir   = sect_dir+'s%04d-lc/'%sector
-out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+# out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+out_dir   = sect_dir+'s%04d-lc-bkgsub/'%sector # !!
+os.makedirs(out_dir, exist_ok=True)
 plot_dir  = sect_dir+'plot/'
 os.makedirs(plot_dir, exist_ok=True)
 
@@ -546,7 +559,7 @@ curl_file = data_dir + 'tesscurl_sector_{}_ffic.sh'.format(sector)
 N_ap  = 0.7
 N_in  = 1.5
 N_out = 2
-mult_output = False # >> produce multiple light curves per source
+mult_output = True # >> produce multiple light curves per source
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
@@ -561,7 +574,7 @@ cam = 2
 ccd = 2
 
 run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                  mult_output=mult_output, tica=tica, save_dir=plot_dir)
+                  mult_output=mult_output, tica=tica)#, save_dir=plot_dir)
 
 
 # for ccd in [2]:
