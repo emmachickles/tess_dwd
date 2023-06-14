@@ -11,6 +11,7 @@ import os
 sys.path.append('/home/submit/echickle/work/')
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import pathlib
 
@@ -27,12 +28,18 @@ import LC_Tools
     
 def run_lc_extraction(data_dir, out_dir, wd_cat, cam=None, ccd=None, mult_output=False,
                       tica=False, save_dir=None):
-    # >> load white dwarf catalog
-    sources=np.loadtxt(wd_cat, usecols=(0,1,2), dtype='str')
-    ticid_main=sources[:,0]
-    catalog_main=SkyCoord(ra=sources[:,1].astype('float')*u.degree,
-                          dec=sources[:,2].astype('float')*u.degree,
-                          frame='icrs')
+    if wd_cat.split('/')[-1] == 'Gaia_blue.csv':
+        sources=pd.read_csv(wd_cat)
+        ticid_main=sources['source_id'].to_numpy()
+        catalog_main=SkyCoord(ra=sources['ra'].to_numpy()*u.degree,
+                              dec=sources['dec'].to_numpy()*u.degree, frame='icrs')
+    else:
+        # >> load white dwarf catalog
+        sources=np.loadtxt(wd_cat, usecols=(0,1,2), dtype='str')
+        ticid_main=sources[:,0]
+        catalog_main=SkyCoord(ra=sources[:,1].astype('float')*u.degree,
+                              dec=sources[:,2].astype('float')*u.degree,
+                              frame='icrs')
     if cam:
         cam_list = [int(cam)]
     else:
@@ -206,10 +213,12 @@ def source_list(f,catalog,ticid, tica=False):
     idxcatalog = np.where(catalogmsk)[0]    
     
     trimmed_catalog=catalog[catalogmsk]
+    if len(trimmed_catalog) == 0:
+        return None, None, None
+
     sky_aperture = SkyCircularAperture(trimmed_catalog, r=21 * u.arcsec)
-    
     pix_aperture = sky_aperture.to_pixel(w)
-    
+
     print(pix_aperture)
     mask=np.abs(pix_aperture.positions[:,0]>0) & np.abs(pix_aperture.positions[:,1]>0) & np.abs(pix_aperture.positions[:,0]<2048) & np.abs(pix_aperture.positions[:,1]<2048)
     trimmed_catalog2=trimmed_catalog[mask]
@@ -258,8 +267,8 @@ def get_flux(sky_aperture, background, wcs, image):
     # phot_bkgsub = sky_stats.sum - bkg_stats.mean * sky_area
     norm = bkg_area / sky_area
     phot_bkgsub = sky_stats.sum - bkg_stats.sum / norm # background-subtracted flux
-    if np.count_nonzero(np.isnan(phot_bkgsub)) > 0:
-        pdb.set_trace()
+    # if np.count_nonzero(np.isnan(phot_bkgsub)) > 0:
+    #     pdb.set_trace()
     return phot_bkgsub
 
 
@@ -415,6 +424,7 @@ def process(f,sky_aperture,background,central_coord, tica=True, save_dir=None):
         cadence = hd['FFIINDEX']
         # TESS Barycentric Julian Day (BTJD), this is a Julian day minus 2457000.0 and corrected to the arrival times at the barycenter of the Solar System
         t=hd['TSTART'] # in BTJD
+        
 
         dt = hdu_list[1].data # >> calibrated ffi 
     n_dty = dt.shape[0]
@@ -458,6 +468,9 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     
     trimmed_catalog, ticid, central_coord=source_list(p[0],catalog_main, ticid_main, tica=tica)
 
+    if trimmed_catalog is None:
+        return
+
     if mult_output:
         aperture = []
         background = []
@@ -486,7 +499,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
         except:
             print('Failed '+str(i))
             failed_inds.append(i)
-            
+
         print(i)
 
         # if n_iter // 10: # >> save intermediate products
@@ -537,21 +550,21 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 56
-
-# >> file paths
-# wd_cat    = '/home/echickle/data/WDs.txt'
-wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+sector = 57
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
 
+# >> file paths
+# wd_cat    = '/home/echickle/data/WDs.txt'
+# wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+
 # out_dir   = sect_dir+'s%04d-lc/'%sector
 # out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
-out_dir   = sect_dir+'s%04d-lc-bkgsub/'%sector # !!
-os.makedirs(out_dir, exist_ok=True)
-plot_dir  = sect_dir+'plot/'
-os.makedirs(plot_dir, exist_ok=True)
+# os.makedirs(out_dir, exist_ok=True)
+
+# plot_dir  = sect_dir+'plot/'
+# os.makedirs(plot_dir, exist_ok=True)
 
 curl_file = data_dir + 'tesscurl_sector_{}_ffic.sh'.format(sector)
 
@@ -559,7 +572,7 @@ curl_file = data_dir + 'tesscurl_sector_{}_ffic.sh'.format(sector)
 N_ap  = 0.7
 N_in  = 1.5
 N_out = 2
-mult_output = True # >> produce multiple light curves per source
+mult_output = False # >> produce multiple light curves per source
 N_ap_list   = [0.5, 0.7, 0.9, 1.1]
 N_bkg_list  = [[1.3, 1.7], [1.8, 2.3], [1.8, 2.], [1.5, 2]]
 
@@ -570,24 +583,40 @@ if len(sys.argv) > 1:
 # -- RUN SETTINGS --------------------------------------------------------------
     
 tica = False
-cam = 2
-ccd = 2
+cam = 4
 
-run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                  mult_output=mult_output, tica=tica)#, save_dir=plot_dir)
+# ccd = 2
+# run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+#                   mult_output=mult_output, tica=tica)#, save_dir=plot_dir)
 
+for ccd in [1,2,3,4]:
 
-# for ccd in [2]:
+    if tica:
+        download_ccd_tica(sect_dir, sector, cam, ccd)    
+        check_download_tica(sect_dir, sector, cam, ccd)
+    else:
+        download_ccd(curl_file, data_dir, cam, ccd)
+        check_download(data_dir, cam, ccd)    
 
-#     # download_ccd(curl_file, data_dir, cam, ccd)
-#     # check_download(data_dir, cam, ccd)
-#     # pdb.set_trace()
-#     try:
-#         run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-#                          mult_output=mult_output, tica=tica)
-#     except:
-#         pass
-#     os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
+    wd_cat    = '/home/echickle/data/WDs.txt'
+    out_dir   = sect_dir+'s%04d-lc/'%sector
+    os.makedirs(out_dir, exist_ok=True)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
+
+    wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+    out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+    os.makedirs(out_dir, exist_ok=True)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
+
+    wd_cat    = '/home/echickle/data/Gaia_blue.csv'
+    out_dir   = sect_dir+'s%04d-lc-gaia/'%sector
+    os.makedirs(out_dir, exist_ok=True)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
+    
+    os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
 
     # download_ccd_tica(sect_dir, sector, cam, ccd)
     # check_download_tica(sect_dir, sector, cam, ccd)
