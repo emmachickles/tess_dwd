@@ -36,8 +36,8 @@ def run_process(p):
     # >> load data
     ticid = np.int64(ticid)
     suffix = "-{}-{}.npy".format(cam, ccd)
-    # y = np.load(data_dir+'lc'+suffix)
-    y = np.load(data_dir+'lc-2-2-ap1.1-in1.8-out2.3.npy')
+    y = np.load(data_dir+'lc'+suffix)
+    # y = np.load(data_dir+'lc-2-2-ap1.1-in1.8-out2.3.npy')
     t = np.load(data_dir+'ts'+suffix)
     coord = np.load(data_dir+'co'+suffix)
     ticid_ccd = np.load(data_dir+'id'+suffix).astype('int')
@@ -107,10 +107,16 @@ def run_process(p):
 if __name__ == '__main__':
 
     import sys, pdb
-    sector, cam, ccd = 61, 1, 1
-    ticid = 178366477
-    data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc-ZTF/"
-    output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+    # sector, cam, ccd = 61, 1, 1
+    # ticid = 178366477
+    # data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc-ZTF/"
+    # output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+    # bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
+
+    sector, cam, ccd = 56, 2, 2
+    ticid = 2009368509
+    data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-test/"%sector
+    output_dir = "/scratch/echickle/s%04d-ZTF-test/"%sector
     bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
 
     p = [sector, cam, ccd, ticid, data_dir, bls_dir]

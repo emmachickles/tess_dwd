@@ -8,7 +8,7 @@ from astroquery.gaia import Gaia
 Gaia.ROW_LIMIT = 5
 Gaia.MAIN_GAIA_TABLE = "gaiadr3.gaia_source"
 
-out_dir = "/scratch/echickle/tess_vet/"
+out_dir = "/scratch/echickle/tess_vet1/"
 data_dir = '/scratch/echickle/'
 os.makedirs(out_dir, exist_ok=True)
 
@@ -254,7 +254,7 @@ ra, dec, pow, snr, dphi, wid, nt, per = [np.empty(0)]*8
 fnames_jvr = []
 
 # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
-for sector in [56, 57, 58, 59, 60, 61, 62, 63]:
+for sector in [56]: # !!
     res_dir = data_dir + 's%04d-ZTF/'%sector + 's%04d-gpu-res/'%sector
     fnames = os.listdir(res_dir)
     for f in fnames:
@@ -309,23 +309,23 @@ ax1.plot(pow[match], snr[match], '<b', label='JVR')
 ax2.plot(pow[match], wid[match], '<b', label='JVR')
 ax3.plot(nt[match], dphi[match], '<b', label='JVR')
 
-# gmag = []
-# for i in range(len(ra)):
-#     coord = SkyCoord(ra=ra[i], dec=dec[i],
-#                      unit=(u.degree, u.degree), frame='icrs')
-#     try:
-#         width, height = u.Quantity(2, u.arcsec), u.Quantity(2, u.arcsec)
-#         r = Gaia.query_object_async(coordinate=coord, width=width, height=height)
-#         # j = Gaia.cone_search_async(co[i], radius=u.Quantity(3, u.arcsec))
-#     except:
-#         gmag.append(np.nan)
-#     if len(r['phot_g_mean_mag']) > 0:
-#         gmag.append(r['phot_g_mean_mag'][0])
-#     else:
-#         gmag.append(np.nan)
-# gmag = np.array(gmag)
-# np.savetxt(data_dir+'Gmag_JVR.txt', gmag)
-gmag = np.loadtxt(data_dir + 'Gmag_JVR.txt')
+gmag = []
+for i in range(len(ra)):
+    coord = SkyCoord(ra=ra[i], dec=dec[i],
+                     unit=(u.degree, u.degree), frame='icrs')
+    try:
+        width, height = u.Quantity(2, u.arcsec), u.Quantity(2, u.arcsec)
+        r = Gaia.query_object_async(coordinate=coord, width=width, height=height)
+        # j = Gaia.cone_search_async(co[i], radius=u.Quantity(3, u.arcsec))
+    except:
+        gmag.append(np.nan)
+    if len(r['phot_g_mean_mag']) > 0:
+        gmag.append(r['phot_g_mean_mag'][0])
+    else:
+        gmag.append(np.nan)
+gmag = np.array(gmag)
+np.savetxt(data_dir+'Gmag_JVR.txt', gmag)
+# gmag = np.loadtxt(data_dir + 'Gmag_JVR.txt')
 
 fig4, ax4 = plt.subplots()
 ax4.plot(gmag_all, per_all[good_idx_all], '.k', ms=1,alpha=0.5)
@@ -365,12 +365,12 @@ def get_stellar_density(ra, dec):
 
     return density
 
-# stellar_density = []
-# for i in range(len(ra)):
-#     stellar_density.append(get_stellar_density(ra[i], dec[i]))
-# stellar_density = np.array(stellar_density)
-# np.savetxt(data_dir+'stellar_density_JVR.txt', stellar_density)
-stellar_density = np.loadtxt(data_dir + 'stellar_density_JVR.txt')
+stellar_density = []
+for i in range(len(ra)):
+    stellar_density.append(get_stellar_density(ra[i], dec[i]))
+stellar_density = np.array(stellar_density)
+np.savetxt(data_dir+'stellar_density_JVR.txt', stellar_density)
+# stellar_density = np.loadtxt(data_dir + 'stellar_density_JVR.txt')
 
 
 fig4, ax4 = plt.subplots()
