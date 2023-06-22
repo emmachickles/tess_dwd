@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
+import os
 
 def load_atlas_lc(f, pos_iqr=3, neg_iqr=10, n_std=2, clip=True, skiprows=0):
 
@@ -233,6 +234,39 @@ def normalize_lc(y, dy=None):
             dy = dy/1.01
         
     return y, dy
+
+def rm_qflag(t, y, cn, qflag_dir, sector, cam, ccd):
+    # >> remove nonzero quality flags
+    sector_dir = qflag_dir + 'sec%d/' % sector
+    file_names = os.listdir(sector_dir)
+    file_names = [f for f in file_names if 'cam%dccd%d'%(cam, ccd) in f]
+    qflag_data = []
+    for f in file_names:
+        qflag_data.extend(np.loadtxt(sector_dir+f))
+    qflag_data = np.array(qflag_data)
+    bad_inds = np.nonzero(qflag_data[:,1])[0]
+    bad_cadence = qflag_data[:,0][bad_inds]
+    _, comm1, comm2 = np.intersect1d(cn, bad_cadence, return_indices=True)
+
+    cn = np.delete(cn, comm1)
+    t = np.delete(t, comm1)
+    y = np.delete(y, comm1)
+    return t, y, cn
+
+def rm_freq_tess():
+    freqs_to_remove = []
+
+    df = 0.1
+    freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
+    # freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
+    freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
+    # freqs_to_remove.append([86400/600 - df, 86400/600 + df])    
+    freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
+    freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
+    freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
+    freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+    return freqs_to_remove
+
 
 def prep_lc(t, y, n_std=5, detrend="wotan", wind=0.1, lim=1000, ticid=None, cam=None,
             ccd=None, coord=None, output_dir=None, dy=None, poly_deg=10):

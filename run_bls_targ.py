@@ -8,6 +8,12 @@ pmax = 10
 qmin = 0.01
 qmax = 0.15
 
+output_dir = "/scratch/echickle/s0056-WD/"
+ticid = [1717393922]
+sector = [56]
+cam = [3]
+ccd = [4]
+
 # output_dir = "/scratch/echickle/BLS_Test_Nonastro/"
 # ticid  = [836153158, 830748654, 778219027, 154178878, 803454388, 803568171]
 # sector = [61,        61,        61,        61,        61,        61]
@@ -20,11 +26,11 @@ qmax = 0.15
 # cam    = [1,         1,        1,         1,         1,         4]
 # ccd    = [1,         1,        4,         4,         3,         3]
 
-output_dir = "/scratch/echickle/BLS_Phase_Entropy/"
-ticid  = [803280089, 803332316, 802868096, 803849868, 803369981, 803313532]
-sector = [61,        61,        61,        61,        61,        61]
-cam    = [1,         1,         1,         1,         1,         1]
-ccd    = [1,         1,         1,         1,         1,         1]
+# output_dir = "/scratch/echickle/BLS_Phase_Entropy/"
+# ticid  = [803280089, 803332316, 802868096, 803849868, 803369981, 803313532]
+# sector = [61,        61,        61,        61,        61,        61]
+# cam    = [1,         1,         1,         1,         1,         1]
+# ccd    = [1,         1,         1,         1,         1,         1]
 
 # output_dir = "/scratch/echickle/MGAB/"
 # ticid  = [803489769, 36085812,  835734923, 875850017, 471014834]
@@ -68,6 +74,11 @@ ls_dir     = output_dir + 'ls/'
 os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(ls_dir, exist_ok=True)
 
+wd_tab= "/scratch/echickle/WDs.txt"
+wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/scratch/echickle/QLPqflags/"
+
 # ------------------------------------------------------------------------------
 
 result = []
@@ -84,6 +95,7 @@ for i in range(len(ticid)):
     y = np.load(data_dir+'lc'+suffix)[ind]
     coord = np.load(data_dir+'co'+suffix)[ind]
 
+    cn = np.load(data_dir+'cn'+suffix)
     t = np.load(data_dir+'ts'+suffix)     
 
     # # !! 
@@ -99,6 +111,7 @@ for i in range(len(ticid)):
 
     # -- prep light curve --------------------------------------------------
     # if i == 1: pdb.set_trace()
+    t, y, cn = lcu.rm_qflag(t, y, cn, qflag_dir, sector[i], cam[i], ccd[i])
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     dy = np.ones(y.shape)*0.1
     
@@ -124,14 +137,16 @@ for i in range(len(ticid)):
              '_ra_{}_dec_{}_'.format(coord[0], coord[1])
 
     res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
-                 objid=ticid[i], suffix=suffix, bins=100, save_npy=False)
+                       objid=ticid[i], suffix=suffix, ra=coord[0], dec=coord[1],
+                       wd_main=wd_main, rp_ext=rp_ext, wd_tab=wd_tab)
+
     res = [ticid[i], coord[0], coord[1]] + list(res)
     result.append(res)
 
 # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
 np.savetxt(output_dir+'GPU.result', np.array(result),
-           fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
-           header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi')
+           fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.8f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
+           header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi')
 print('Saved '+output_dir+'GPU.result')
 
     # # period = 0.038365738 # TIC 2040677137
