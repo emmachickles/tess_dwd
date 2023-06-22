@@ -218,6 +218,10 @@ def normalize_lc(y, dy=None):
     y = y/med
     if dy is not None:
         dy = dy/med
+    if med < 0:
+        y = -1*y + 2
+        if dy is not None:
+            dy = -1*dy
 
     if np.min(y) < 0:
         y -= np.min(y)
