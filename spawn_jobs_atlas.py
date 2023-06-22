@@ -7,14 +7,14 @@ from multiprocessing import Pool
 from run_bls_atlas import run_process
 
 # data_dir = "/matchfiles/data2/ATLAS/"
-data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
-output_dir = "/home/echickle/GPU_res/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
+# output_dir = "/home/echickle/GPU_res/"
 
-# data_dir = "/pool001/echickle/ATLAS/"
-# output_dir = "/pool001/echickle/GPU_res/"
+data_dir = "/pool001/echickle/ATLAS/"
+output_dir = "/pool001/echickle/GPU_res/"
 
-N_p = 3 # >> hypernova.Caltech.edu
-# N_p=16 # >> engaging
+# N_p = 3 # >> hypernova.Caltech.edu
+N_p=16 # >> engaging
 
 p = [data_dir+f for f in os.listdir(data_dir)]
 
@@ -26,7 +26,7 @@ if N == N_sub:
 else:    
     p=p[(N-1)*sub:N*sub]
 
-p = [data_dir+f for f in os.listdir(data_dir)]
+# p = [data_dir+f for f in os.listdir(data_dir)]
 # p = p[:20]
 # p = [data_dir+str(6079447764213678592)]
 # p = []

@@ -2,10 +2,10 @@
 
 pos_iqr = 3
 neg_iqr = 10
-skiprows = 1
-objid_type = None
 # skiprows = 1
-# objid_type = 'GAIAID'
+# objid_type = None
+skiprows = 0
+objid_type = 'GAIAID'
 
 pmin = 2 # minutes
 pmax = 10 # days 
@@ -13,15 +13,14 @@ qmin = 0.01
 qmax = 0.15
 dlogq = 0.1
 
-
-pow_threshold=0
-snr_threshold=0
-per_threshold=14400
-wid_threshold=0
-# pow_threshold=25
-# snr_threshold=1.
-# per_threshold=210
-# wid_threshold=5
+# pow_threshold=0
+# snr_threshold=0
+# per_threshold=14400
+# wid_threshold=0
+pow_threshold=25
+snr_threshold=1.
+per_threshold=210
+wid_threshold=5
 
 # data_dir = "/matchfiles/data2/ATLAS/"
 data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
