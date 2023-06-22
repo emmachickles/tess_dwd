@@ -8,14 +8,16 @@ from run_bls_tess import run_process
 sector, cam, ccd = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
 
 # output_dir = "/scratch/echickle/s%04d/"%sector
-output_dir = "/scratch/echickle/s%04d-ZTF/"%sector
+output_dir = "/scratch/echickle/s%04d-WD/"%sector
 
 # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
+data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
+# data_dir = "/scratch/data/tess/lcur/ffi/s0061-lc/"
 
 bls_dir = output_dir + "s%04d"%sector + "-bls-{}-{}/".format(cam,ccd)
 gpu_dir = output_dir + "s%04d"%sector + "-gpu-res/"
 os.makedirs(output_dir, exist_ok=True)
+os.makedirs(bls_dir, exist_ok=True)
 os.makedirs(gpu_dir, exist_ok=True)
 
 suffix = "-{}-{}.npy".format(cam, ccd)
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     N_p=16 # >> uzay has 64 cores, 4 GPUs => 16 CPUs per GPU
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
-    result = pool.map(run_process, p) # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
+    result = pool.map(run_process, p) # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
     np.savetxt(gpu_dir+'GPU-{}-{}-{}.result'.format(sector, cam, ccd), np.array(result),
-               fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
-               header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi')
+               fmt='%s,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.8f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%i,%10.5f',
+               header='ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi')

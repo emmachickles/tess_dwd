@@ -2,8 +2,8 @@
 
 lc_dir = "/scratch/echickle/grnd_lc/"
 
-lc_f = lc_dir + "LDSS_230421.txt" # !!
-sector, cam = 62, 3 # !!
+lc_f = lc_dir + "GPU-56-1-1.result" # !!
+sector, cam = 56, 1 # !!
 
 out_dir = "/scratch/echickle/LDSS_230421_ATLAS/"
 # out_dir = "/scratch/echickle/s%04d/"%sector \
@@ -42,7 +42,7 @@ qmax = 0.15
 # ticid = np.delete(ticid, comm1) 
 
 # !!
-ticid = ['808364853']
+# ticid = ['767706310']
 
 for i in range(len(ticid)):
     print(str(i)+'/'+str(len(ticid)))
@@ -74,6 +74,7 @@ for i in range(len(ticid)):
         ra = float(fname_tess[10])
         dec = float(fname_tess[12])    
         suffix = '_'.join(fname_tess[4:13])
-        
+
+    pdb.set_trace()
     lcu.make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
                         gaia_tab,out_dir,suffix,bls=bls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)

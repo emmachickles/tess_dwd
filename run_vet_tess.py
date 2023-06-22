@@ -4,7 +4,7 @@ import numpy as np
 import lc_utils as lcu
 import matplotlib.pyplot as plt
 
-sector = 61
+sector = 56
 n_std = 5
 detrend = "wotan"
 wind = 0.1

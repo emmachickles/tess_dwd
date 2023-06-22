@@ -6,12 +6,23 @@ import multiprocessing
 from multiprocessing import Pool
 from run_bls_atlas import run_process
 
-# data_dir = "/matchfiles/data2/ATLAS/"
-# data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
-# output_dir = "/home/echickle/GPU_res/"
+# desc = "WDUCB"
+# data_dir = "/home/echickle/data/atlas_"+desc+"/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults_"+desc+"/"
+# output_dir = "/home/echickle/out/"
+# bls_dir = output_dir + 'plot_'+desc+'/'
 
-data_dir = "/pool001/echickle/ATLAS/"
-output_dir = "/pool001/echickle/GPU_res/"
+# data_dir = "/matchfiles/data2/ATLAS/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults_ZTF/"
+# data_dir = "/home/echickle/data/atlasforcedphotometryresults/"
+
+# data_dir = "/pool001/echickle/ATLAS/"
+data_dir = "/pool001/echickle/sdB/"
+output_dir = "/pool001/echickle/sdB_res/"
+bls_dir = output_dir + 'bls_plot/'
+
+os.makedirs(output_dir, exist_ok=True)
+os.makedirs(bls_dir, exist_ok=True)
 
 # N_p = 3 # >> hypernova.Caltech.edu
 N_p=16 # >> engaging
@@ -19,7 +30,8 @@ N_p=16 # >> engaging
 p = [data_dir+f for f in os.listdir(data_dir)]
 
 N=int(sys.argv[1])
-N_sub = 500
+# N_sub = 500 # 
+N_sub = 25 # sdB
 sub=int(np.ceil(len(p)/N_sub)) # 1393864 files, 500 sublists = 2780 files per job
 if N == N_sub:
     p=p[(N-1)*sub:]
@@ -45,10 +57,14 @@ else:
 # for i in range(len(gid)):
 #     p.append(data_dir+str(gid[i]))
 
-    
+for i in range(len(p)):
+    p[i] = [p[i], data_dir, bls_dir]
+
+
 if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
-    np.savetxt(output_dir+'GPU'+str(N)+'.result',np.array(result),
-               fmt='%s,'+','.join( ['%10.5f'] * (len(result[0])-1) ) )
+    np.savetxt(output_dir+'GPU_'+desc+'.result',np.array(result),
+               fmt='%s', header='gaiaid ra dec sig snr wid period period_min q phi0 epo rp nt dphi')
+    print(output_dir+'GPU_'+desc+'.result')
