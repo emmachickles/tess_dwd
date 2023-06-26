@@ -3,9 +3,9 @@
 pos_iqr = 3
 neg_iqr = 10
 # skiprows = 1
-# objid_type = None
+objid_type = None
 skiprows = 0
-objid_type = 'GAIAID'
+# objid_type = 'GAIAID'
 
 pmin = 2 # minutes
 pmax = 10 # days 
@@ -13,16 +13,18 @@ qmin = 0.01
 qmax = 0.15
 dlogq = 0.1
 
-pow_threshold=25
+pow_threshold=10.
+# pow_threshold=25
 snr_threshold=4.
 per_threshold=210
 wid_threshold=5
 
 # wd_main = "/home/echickle/data/GaiaEDR3_WD_main.fits"
 # rp_ext = "/home/echickle/data/GaiaEDR3_WD_RPM_ext.fits"
-wd_main = "/data/GaiaEDR3_WD_main.fits"
-rp_ext = "/data/GaiaEDR3_WD_RPM_ext.fits"
-
+# wd_main = "/data/GaiaEDR3_WD_main.fits"
+# rp_ext = "/data/GaiaEDR3_WD_RPM_ext.fits"
+wd_main = "/nobackup1c/users/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/nobackup1c/users/echickle/GaiaEDR3_WD_RPM_ext.fits"
 
 def run_process(p):
     import lc_utils as lcu

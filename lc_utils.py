@@ -216,23 +216,14 @@ def bin_timeseries(t, y, bins, dy=None):
 
 def normalize_lc(y, dy=None):
     med = np.median(y)
+    if med <= 0.:
+        y -= np.min(y)
+        med = np.median(y)
+        
     y = y/med
     if dy is not None:
         dy = dy/med
-    if med < 0:
-        y = -1*y + 2
-        if dy is not None:
-            dy = -1*dy
-
-    if np.min(y) < 0:
-        y -= np.min(y)
     
-    if np.min(y) == 0.:
-        y += 0.01
-        y = y/1.01
-        if dy is not None:
-            dy = dy/1.01
-        
     return y, dy
 
 def rm_qflag(t, y, cn, qflag_dir, sector, cam, ccd):
