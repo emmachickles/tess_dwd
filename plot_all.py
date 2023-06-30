@@ -1,10 +1,10 @@
 # ------------------------------------------------------------------------------
 
-# atlas_dir = "/data/ATLAS/WDs/"
-# out_dir = "/home/echickle/out/vet/"
+atlas_dir = "/data/ATLAS/WDs/"
+out_dir = "/home/echickle/out/vet/"
 
-atlas_dir = "/data/ATLAS/sdB/"
-out_dir = "/home/echickle/out/vet_sdB/"
+# atlas_dir = "/data/ATLAS/sdB/"
+# out_dir = "/home/echickle/out/vet_sdB/"
 
 tess_dir = "/home/echickle/data/"
 gaia_tab = "/home/echickle/data/100pc_clean.fits"
@@ -30,9 +30,17 @@ os.makedirs(out_dir, exist_ok=True)
 ra_list = [283.68673, 206.76688, 297.90905, 299.21942, 344.1389, 251.78027, 102.7166, 118.18445, 254.42919, 314.41071, 294.79548]
 dec_list = [-35.51323, -31.14789, 34.12481, -31.65236, 47.70825, -24.91717, 53.12089, 64.39376, -19.40401, -46.54745, -40.57919]
 
-ra_list = [118.18445, 254.42919, 314.41071, 294.79548]
-dec_list =[64.39376, -19.40401, -46.54745, -40.57919]
+ra_list = [344.1389, 314.41071, 297.90905, 254.42919, 251.78027, 206.76688, 118.18445]
+dec_list = [47.70825, -46.54745, 34.12481, -19.40401, -24.91717, -31.14789, 64.39376]
 
+
+ra_list = [254.42919, 118.18445]
+dec_list = [-19.40401, 64.3937]
+
+ra_list = [102.88891]
+dec_list = [28.73981]
+per =  765.206543 / 1440. / 60.
+# per = None
 
 for ra, dec in zip(ra_list, dec_list):
     # ra, dec = 121.174886, -2.262535
@@ -48,4 +56,5 @@ for ra, dec in zip(ra_list, dec_list):
 
     suffix = 'ra_{}_dec_{}'.format(ra, dec)
     lcu.make_panel_plot(fname_atlas,fnames_ztf,sector_dir,ticid,cam,ccd,ra,dec,
-                        gaia_tab,wd_tab,wd_main,rp_ext,out_dir,suffix,bls=bls,clip=clip)
+                        gaia_tab,wd_tab,wd_main,rp_ext,out_dir,suffix,bls=bls,clip=clip,
+                        per=per)

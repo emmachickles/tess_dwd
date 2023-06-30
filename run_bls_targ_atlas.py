@@ -19,7 +19,7 @@ print(dec)
 t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
     BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
 res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=output_dir,
-             objid=gid, objid_type='GAIAID',
-             dy=dy, suffix=suffix, wd_main=wd_main, rp_ext=rp_ext)
+                   objid=gid, objid_type=None,
+                   dy=dy, suffix=suffix, wd_main=wd_main, rp_ext=rp_ext)
 # per, q, epo = res[3], res[5], res[7]
 # lcu.plot_eclipse_timing(t, y, per, epo, q, output_dir+'GAIAID_{}_{}_{}_'.format(gid, ra, dec))

@@ -466,7 +466,8 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     cadence_list=[]
     orbit_list = []
     
-    trimmed_catalog, ticid, central_coord=source_list(p[0],catalog_main, ticid_main, tica=tica)
+    trimmed_catalog, ticid, central_coord=source_list(p[1],catalog_main, ticid_main, tica=tica)
+    pdb.set_trace()
 
     if trimmed_catalog is None:
         return
@@ -551,7 +552,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 62
+sector = 64
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
@@ -584,13 +585,13 @@ if len(sys.argv) > 1:
 # -- RUN SETTINGS --------------------------------------------------------------
     
 tica = False
-cam = 3
+cam = 1
 
 # ccd = 2
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
 #                   mult_output=mult_output, tica=tica)#, save_dir=plot_dir)
 
-for ccd in [1,2,3,4]: # !!
+for ccd in [2,3,4]: # !!
 
     if tica:
         download_ccd_tica(sect_dir, sector, cam, ccd)    

@@ -132,9 +132,10 @@ def load_ztf_lc(fnames, n_std=7, clip=True):
 
     t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
 
-    std = np.std(y)
-    inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
-    t, y, dy = t[inds], y[inds], dy[inds]  
+    if clip:
+        std = np.std(y)
+        inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
+        t, y, dy = t[inds], y[inds], dy[inds]  
 
     # if clip:
     #     q3, q1 = np.percentile(y, [75 ,25])
@@ -235,11 +236,8 @@ def bin_timeseries(t, y, bins, dy=None):
                 y_binned[i] = np.average(y_binned[i])
                 dy_binned.append(err)
             else:
-                try:
-                    y_binned[i] = np.average(y_binned[i], weights=1./dy_binned[i]**2)
-                    dy_binned[i] = np.average(dy_binned[i]/np.sqrt(npts))
-                except:
-                    pdb.set_trace()
+                y_binned[i] = np.average(y_binned[i], weights=1./dy_binned[i]**2)
+                dy_binned[i] = np.average(dy_binned[i]/np.sqrt(npts))
             
 
     return np.array(t_binned), np.array(y_binned), np.array(dy_binned)
@@ -461,6 +459,9 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
     # -- calculate SNR ---------------------------------------------------------
     if bls:
         snr, phi, transit, near_transit, epo, nt, dphi = calc_snr(t, y, period, q, phi0)
+    else:
+        phi= np.mod(t, period) / period # >> phase
+        dphi = np.max( np.diff( np.sort(phi) ) )
         
     # -- calculate fit ---------------------------------------------------------
     if not bls:
@@ -481,7 +482,12 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
     
     # print('Fold light curve done!')
     # == make plot =============================================================
-    if sig >= pow_threshold and snr >= snr_threshold and period*1440 <= per_threshold and\
+    snr_threshold = True
+    if bls:
+        if snr < snr_threshold:
+            snr_treshold = False
+    
+    if sig >= pow_threshold and snr_threshold and period*1440 <= per_threshold and\
        wid >= wid_threshold: 
 
         # -- initialize figure -------------------------------------------------
@@ -660,22 +666,24 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
 
     # -- return values ---------------------------------------------------------
     sig = np.round(sig, 5)
-    snr = np.round(snr,5)
     wid = np.int64(wid)
     period = np.round(period,10)
     period_min = np.round(period*1440, 3)
-    q = np.round(q,5)
-    phi0 = np.round(phi0,5)
-    epo = np.round(epo,7)
-    rp = np.round(rp, 2)
-    nt = np.int64(nt)
     dphi = np.round(dphi, 5)
 
-
     if bls:
+        snr = np.round(snr,5)
+        q = np.round(q,5)
+        phi0 = np.round(phi0,5)
+        epo = np.round(epo,7)
+        rp = np.round(rp, 2)
+        nt = np.int64(nt)
+        
         return sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
+
+
     else:
-        return sig, wid, period, period_min
+        return sig, wid, period, period_min, dphi
 
     
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
@@ -1064,34 +1072,48 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
             if per is None:
                 per = per_atlas            
             ax8.axvline(x=1/per, color='r', linestyle='dashed')        
-            ax8.plot(freqs, power, '.k', ms=1)
+            # ax8.plot(freqs, power, '.k', ms=1)
+            centr = np.argmax(power)
+            ax8.plot(freqs[max(0,centr-3000):centr+3000],
+                     power[max(0,centr-3000):centr+3000], '.k', ms=1)            
             ax8.set_xlabel('Frequency [1/days]')
-            ax8.set_xlim(ax7.get_xlim())
+
 
             if bls:
                 ax5.set_ylabel('ATLAS BLS Power')        
                 ax8.set_ylabel('ATLAS BLS Power')
             else:
                 ax5.set_ylabel('ATLAS LS Power') 
-                ax8.set_ylabel('ATLAS LS Power')            
-            
+                ax8.set_ylabel('ATLAS LS Power')
+
         folded_t, folded_y, folded_dy = bin_timeseries(t%per_atlas, y, bins, dy=dy)
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period=per_atlas,
                          ylabel="ATLAS Relative Flux")
+
+        fig00, ax00=plt.subplots()
+        folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
+        plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+                         ylabel="ATLAS Relative Flux")
+        fig00.savefig(out_dir+suffix+'_binned_ATLAS.png', dpi=300)
+        print('Saved '+out_dir+suffix+'_binned_ATLAS.png')
+        plt.close(fig00)
         
-        fig2, ax2 = plt.subplots(figsize=(8,4))
-        plot_phase_curve(ax2, t%per_atlas, y, dy, period=per_atlas,
+        fig00, ax00 = plt.subplots(figsize=(8,4))
+        plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="ATLAS Flux",alpha=0.2)
         w = max(1, int(0.05*len(y)))
-        inds = np.argsort(t%per_atlas)
-        tconv = np.convolve((t%per_atlas)[inds], np.ones(w), 'valid') / w
-        yconv = np.convolve(y[inds], np.ones(w), 'valid') / w
-        ax2.plot(tconv*1440., yconv, '-b', lw=1)
-        ax2.plot((tconv+per_atlas)*1440., yconv, '-b', lw=1)
-        ax2.set_ylim([np.min(y)-np.std(y), np.max(y)+np.std(y)])
-        fig2.savefig(out_dir+suffix+'_ATLAS.png', dpi=300)
-        print('Saved ' +out_dir+suffix+'_ATLAS.png')
-
+        inds = np.argsort(t%per)
+        tconv = (t%per)[inds]
+        tconv = np.append(tconv, tconv+per)
+        yconv = np.concatenate((y[inds], y[inds]))
+        tconv = np.convolve(tconv, np.ones(w), 'valid') / w
+        yconv = np.convolve(yconv, np.ones(w), 'valid') / w
+        ax00.plot(tconv*1440., yconv, '-b', lw=1)
+        ax00.set_ylim([np.min(y)-np.std(y), np.max(y)+np.std(y)])
+        fig00.savefig(out_dir+suffix+'_unbinned_ATLAS.png', dpi=300)
+        print('Saved ' +out_dir+suffix+'_unbinned_ATLAS.png')
+        plt.close(fig00)
+        
     # -- tess phase curve ------------------------------------------------------
 
     if tess_dir is not None:
@@ -1133,8 +1155,10 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
 
             centr = np.argmin(np.abs(freqs - 1/per))
             ax7.axvline(x=1/per, color='r', linestyle='dashed')
-            ax7.plot(freqs[max(0,centr-3000):centr+3000],
-                     power[max(0,centr-3000):centr+3000], '.k', ms=1)
+            # ax7.plot(freqs[max(0,centr-3000):centr+3000],
+            #          power[max(0,centr-3000):centr+3000], '.k', ms=1)
+            ax7.plot(freqs, power, '.k', ms=1)
+            ax7.set_xlim(ax8.get_xlim())          
             ax7.set_xlabel('Frequency [1/days]')
 
             if bls:
@@ -1150,6 +1174,29 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period=per_tess,
                          ylabel="TESS Relative Flux")
 
+        fig00, ax00=plt.subplots()
+        folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
+        plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+                         ylabel="TESS Relative Flux")
+        fig00.savefig(out_dir+suffix+'_binned_TESS.png', dpi=300)
+        print('Saved '+out_dir+suffix+'_binned_TESS.png')
+        plt.close(fig00)
+        
+        fig00, ax00=plt.subplots()
+        plot_phase_curve(ax00, t%per, y, dy, period=per,
+                         ylabel="TESS Flux", alpha=0.6)
+        w = max(1, int(0.05*len(y)))
+        inds = np.argsort(t%per)
+        tconv = (t%per)[inds]
+        tconv = np.append(tconv, tconv+per) 
+        yconv = np.concatenate((y[inds], y[inds]))
+        tconv = np.convolve(tconv, np.ones(w), 'valid') / w
+        yconv = np.convolve(yconv, np.ones(w), 'valid') / w        
+        ax00.plot(tconv*1440., yconv, '-b', lw=1)
+        ax00.set_ylim([np.min(y)-np.std(y), np.max(y)+np.std(y)])        
+        fig00.savefig(out_dir+suffix+'_unbinned_TESS.png', dpi=300)
+        print('Saved '+out_dir+suffix+'_unbinned_TESS.png')
+        plt.close(fig00)
         
 
     # -- ztf phase curve -------------------------------------------------------
@@ -1180,7 +1227,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
             ax9.axvline(x=1/per, color='r', linestyle='dashed')        
             ax9.plot(freqs, power, '.k', ms=1)
             ax9.set_xlabel('Frequency [1/days]')
-            ax9.set_xlim(ax7.get_xlim())
+            ax9.set_xlim(ax8.get_xlim())
 
             if bls:
                 ax6.set_ylabel('ZTF BLS Power')        
@@ -1193,19 +1240,30 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period=per_ztf,
                          ylabel="ZTF Relative Flux")
 
-        fig2, ax2=plt.subplots()
-        plot_phase_curve(ax2, t%per_ztf, y, dy, period=per_ztf,
+        fig00, ax00=plt.subplots()
+        folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
+        plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+                         ylabel="ZTF Relative Flux")
+        fig00.savefig(out_dir+suffix+'_binned_ZTF.png', dpi=300)
+        print('Saved '+out_dir+suffix+'_binned_ZTF.png')
+        plt.close(fig00)
+        
+        fig00, ax00=plt.subplots()
+        plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="ZTF Flux", alpha=0.6)
         w = max(1, int(0.05*len(y)))
-        inds = np.argsort(t%per_ztf)
-        tconv = np.convolve((t%per_ztf)[inds], np.ones(w), 'valid') / w
-        yconv = np.convolve(y[inds], np.ones(w), 'valid') / w
-        ax2.plot(tconv*1440., yconv, '-b', lw=1)
-        ax2.plot((tconv+per_ztf)*1440., yconv, '-b', lw=1)
-        ax2.set_ylim([np.min(y)-np.std(y), np.max(y)+np.std(y)])        
-        fig2.savefig(out_dir+suffix+'_ZTF.png', dpi=300)
+        inds = np.argsort(t%per)
+        tconv = (t%per)[inds]
+        tconv = np.append(tconv, tconv+per) 
+        yconv = np.concatenate((y[inds], y[inds]))
+        tconv = np.convolve(tconv, np.ones(w), 'valid') / w
+        yconv = np.convolve(yconv, np.ones(w), 'valid') / w        
+        ax00.plot(tconv*1440., yconv, '-b', lw=1)
+        ax00.set_ylim([np.min(y)-np.std(y), np.max(y)+np.std(y)])        
+        fig00.savefig(out_dir+suffix+'_unbinned_ZTF.png', dpi=300)
+        print('Saved '+out_dir+suffix+'_unbinned_ZTF.png')
+        plt.close(fig00)
         
-
     # -- hr diagram ------------------------------------------------------------
 
     hr_diagram(gaia_tab, ra, dec, ax3)
