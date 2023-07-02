@@ -1,4 +1,4 @@
-data_dir = "/scratch/data/tess/lcur/ffi/s0056-lc-gaia/" # !!
+data_dir = "/scratch/data/tess/lcur/ffi/s0057-lc-ZTF/" # !!
 import os
 import numpy as np
 from astroquery.mast import Catalogs
@@ -8,7 +8,7 @@ print(suffix_list)
 
 for suffix in suffix_list[1:]:
     old_fname = data_dir+'id'+suffix
-    new_fname = data_dir+'gid'+suffix # !!
+    new_fname = data_dir+'zid'+suffix # !!
     os.system('cp '+old_fname+' '+new_fname)
 
     co = np.load(data_dir+'co'+suffix)

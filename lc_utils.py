@@ -276,6 +276,7 @@ def rm_freq_tess():
     freqs_to_remove = []
 
     df = 0.1
+    freqs_to_remove.append([86400/(200) - df, 86400/(200) + df])
     freqs_to_remove.append([86400/(200*2) - df, 86400/(200*2) + df])
     # freqs_to_remove.append([86400/500 - df, 86400/500 + df])    
     freqs_to_remove.append([86400/(200*3) - df, 86400/(200*3) + df])
@@ -562,9 +563,15 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
             ax1_L.set_yticklabels([]) 
         
         if plot_pg:
-            ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
-            ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
-            ax1.set_xlabel('Period [minutes]')
+            ax1.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            # ax1.plot(1440/freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
+            # ax1.set_xlim([np.min(1440/freqs), np.max(1440/freqs)])
+            # ax1.set_xlim([np.min(1440/freqs), 60])
+            # ax1.set_xlim([np.min(freqs), 48.]) # 2 hours
+            ax1.set_xlim([24., np.max(freqs)]) # 2 hours
+       
+            # ax1.set_xlabel('Period [minutes]')
+            ax1.set_xlabel('Frequency [1/days]')
 
             if bls:
                 # ax0_L.set_ylabel('BLS Power')        

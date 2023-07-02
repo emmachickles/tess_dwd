@@ -77,74 +77,59 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,freqs_to_remove=No
         f_best = freqs[i_best]
         period=1.0/f_best
 
-        # import time
-        # start = time.time()
         # >> get best duration, epoch
         durations = np.geomspace(qmin, qmax, 100)*period * u.day
         model = BoxLeastSquares(t*u.day, y)
         periodogram = model.power(np.array([period])*u.day, durations)
         max_power = np.argmax(periodogram.power)
         q_best = periodogram.duration[max_power].value /period
-        # returns mid-transit time
-        phi0_best = (periodogram.transit_time[max_power].value % period) / period
-        # instead return beginning of transit
-        phi0_best = phi0_best - q_best/2
         
-        # end = time.time()
-        # print(end-start)
-        # print(q_best, phi0_best)
-
-        # start = time.time()
-        # sol_power, sols = bls.eebls_gpu(t, y, dy, np.array([f_best]),
-        #                                **search_params)
-        # sols = np.array(sols)
-        # q_best, phi0_best = sols[np.argmax(sol_power)]
-        # end = time.time()
-        # print(end-start)
-        # print(q_best, phi0_best)
-        # import pdb
-        # pdb.set_trace()
-
-        # >> finding second peak        
-        # freqs_to_remove = [[f_best-0.1*f_best, f_best+0.1*f_best]]
-        # for pair in freqs_to_remove:
-        #         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
-        #         bls_power2 = bls_power[idx]
-        #         freqs2 = freqs[idx]
-        # bls_power_best=(np.max(bls_power)-np.mean(bls_power2))/np.std(bls_power2)        
+        phi0_best = (periodogram.transit_time[max_power].value % period) / period # returns mid-transit time
+        phi0_best = phi0_best - q_best/2 # instead return beginning of transit        
         t=t+tmean # >> add back the mean 
 
         return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best
 
-def LS(t,y,dy,pmin=2,remove=False):
+def LS(t,y,dy,pmin=2,freqs_to_remove=None, oversampling_factor=7.0):
+        import cuvarbase.lombscargle as gls
+        import pycuda.driver as cuda
+        import pycuda.autoinit
+
+        # Explicitly initialize the CUDA context
+        ctx = cuda.Device(0).make_context()
+
         t=t-np.mean(t)
         lightcurves=[(t,y,dy)]
         baseline=np.max(t)-np.min(t)
 
-        df = 1.0 / (baseline*3.0)
+        df = 1.0 / (baseline*oversampling_factor)
         fmin = 4.0/baseline
-        fmax = 1440/pmin
+        fmax = 1440./pmin
 
         nf = int(np.ceil((fmax - fmin) / df))
         freqs=np.linspace(fmin,fmax,nf)
 
-        proc = gls.LombScargleAsyncProcess(use_double=True)
-        result = proc.run([(t, y, dy)],freqs=freqs,use_fft=True)
+        print(t.shape)
+        print(y.shape)
+        print(freqs.shape)
+        proc = gls.LombScargleAsyncProcess()
+        result = proc.run([(t, y, dy)],freqs=freqs)
         proc.finish()
         freqs, ls_power = result[0]
 
-        if remove:
-                freqs_to_remove = [[3e-2,4e-2], [49.99,50.01], [48.99,49.01], [47.99,48.01], [46.99,47.01], [45.99,46.01], [3.95,4.05], [2.95,3.05], [1.95,2.05], [0.95,1.05], [0.48, 0.52], [0.32, 0.34], [0.24, 0.26], [0.19, 0.21]]
+
+        if freqs_to_remove is not None:
+
                 for pair in freqs_to_remove:
                         idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
-                        ls_power = ls_power[idx]
                         freqs = freqs[idx]
-                                
-        significance=(np.max(ls_power)-np.mean(ls_power))/np.std(ls_power)
+                        ls_power = ls_power[idx]
 
         period=1.0/freqs[np.argmax(ls_power)]
 
-        return t, y, dy, period, significance
+        cuda.Context.pop()
+
+        return t, y, dy, period, freqs, ls_power
 
 def LS_Astropy(t,y,dy, remove=True,pmax=0.25):
         from astropy.timeseries import LombScargle
