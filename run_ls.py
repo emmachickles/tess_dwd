@@ -7,7 +7,7 @@ pmax = 0.13
 qmin = 0.01
 qmax = 0.15
 
-sector, cam, ccd = 64, 2, 3
+sector, cam, ccd = 65, 1, 2
 
 import sys
 # sector = int(sys.argv[1])
@@ -58,7 +58,7 @@ inds = np.argsort(time)
 time, flux = time[inds], flux[:,inds]
 
 # !! 
-ind = np.nonzero(ticid == 2052916998) 
+ind = np.nonzero(ticid == 150808542) 
 flux = [flux[ind][0]]
 coord = [coord[ind][0]]
 ticid = [ticid[ind][0]]
@@ -113,9 +113,13 @@ for i in range(len(flux)):
     freqs = 86400 / periods
 
     # GD 29-38
-    freqs = np.array([0.9847, 1.0742, 1.2126, 1.4771, 1.6317])
+    freqs = np.array([0.9847, 1.0742, 1.2126, 1.4771, 1.6317]) # hm check
     freqs = freqs * 1e3
 
+    # WD J1527
+    periods = [745.87715, 704.24127, 702.89501, 701.75412, 649.39711, 351.46205]
+    periods = np.array(periods)
+    freqs = 86400 / periods
 
     fig, ax = plt.subplots(figsize=(10,4))
     for i in range(len(freqs)):
