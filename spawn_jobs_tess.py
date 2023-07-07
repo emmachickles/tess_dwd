@@ -35,7 +35,7 @@ for i in range(len(ticid)):
     p.append( [sector, cam, ccd, ticid[i], data_dir, bls_dir] )
 
 if __name__ == "__main__":
-    N_p=16 # >> uzay has 64 cores, 4 GPUs => 16 CPUs per GPU
+    N_p=10 # >> uzay has 64 cores, 4 GPUs => 16 CPUs per GPU
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
     result = pool.map(run_process, p) # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi

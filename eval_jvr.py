@@ -6,25 +6,28 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u 
 from astroquery.gaia import Gaia
 import lc_utils as lcu
+
+# Set constants 
 Gaia.ROW_LIMIT = 5
-Gaia.MAIN_GAIA_TABLE = "gaiadr3.gaia_source"
-
-out_dir = "/scratch/echickle/s0056_eval/"
+Gaia.MAIN_GAIA_TABLE = 'gaiadr3.gaia_source'
+out_dir = '/scratch/echickle/s0056_eval/'
 data_dir = '/scratch/echickle/'
-os.makedirs(out_dir, exist_ok=True)
 lc_dir = '/scratch/data/tess/lcur/ffi/s0056-lc-ZTF/'
-qflag_dir = "/scratch/echickle/QLPqflags/"
-wd_tab= "/scratch/echickle/WDs.txt"
-wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
-rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = '/scratch/echickle/QLPqflags/'
+wd_tab = '/scratch/echickle/WDs.txt'
+wd_main = '/scratch/echickle/GaiaEDR3_WD_main.fits'
+rp_ext = '/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits'
 sector = 56
-
-
 pmax = 0.15*1440
-cat = np.loadtxt("/scratch/echickle/ZTF_Eclipses.txt", usecols=(1,2,3))
-ra_ztf, dec_ztf = cat[:,0], cat[:,1]
-per_ztf = cat[:,2]
 
+# Make output directory
+os.makedirs(out_dir, exist_ok=True)
+
+# Load Jan's WDRD Catalog
+cat = np.loadtxt("/scratch/echickle/ZTF_Eclipses.txt", usecols=(1,2,3))
+ra_ztf, dec_ztf, per_ztf = cat[:,0], cat[:,1], cat[:,2]
+
+# Load Gaia white darf catalog
 wd_cat  = pd.read_csv(data_dir+'WDs.txt', header=None, sep='\s+', dtype='str')
 ra_wd = wd_cat[1].to_numpy().astype('float')
 dec_wd = wd_cat[2].to_numpy().astype('float')
@@ -32,27 +35,12 @@ gmag_wd = wd_cat[4].to_numpy().astype('float')
 
 # -- TESS signals --------------------------------------------------------------
 
-# >> all signals
-ticid_all = []
-ra_all = []
-dec_all = []
-power_all = []
-snr_all = []
-wid_all = []
-per_all = []
-nt_all = []
-dphi_all = []
+# Initialize signal lists
+ticid_all, ra_all, dec_all, power_all, snr_all, wid_all, per_all, nt_all, dphi_all = ([] for _ in range(9))
 
 # >> signals discovered in S61
 ticid_tess = np.array([803489769, 36085812, 800042858, 270679102, 455206965, 452954413, 767706310, 96852226, 677736827])
-ra_tess = []
-dec_tess = []
-pow_tess = []
-snr_tess = []
-wid_tess = []
-per_tess = []
-nt_tess = []
-dphi_tess= []
+ra_tess, dec_tess, pow_tess, snr_tess, wid_tess, per_tess, nt_tess, dphi_tess = ([] for _ in range(8))
 
 # >> KB UCBs systems in the white dwarf catalog
 ticid_ucb = np.array([719830487, 702774311, 713144139, 1939638541, 746047312, 1504732386, 1717410027, 1958881490, 2040677137, 1270451609])
