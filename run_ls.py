@@ -20,11 +20,19 @@ import sys
 # data_dir = "/home/echickle/data/s%04d/"%sector+"/s%04d-lc/"%sector
 # output_dir = "/home/echickle/out/LS-s00{}-{}-{}/".format(sector, cam, ccd)
 
-wd_tab = "/scratch/echickle/WDs.txt"
-wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
-rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
-data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-# data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc-ZTF/"%sector
+# >> ENGAGING
+wd_tab= "/nobackup1c/users/echickle/WDs.txt"
+wd_main = "/nobackup1c/users/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/nobackup1c/users/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/nobackup1c/users/echickle/QLPqflags/"
+data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc/"%sector
+
+# >> UZAY
+# wd_tab = "/scratch/echickle/WDs.txt"
+# wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
+# rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+# qflag_dir = "/scratch/echickle/QLPqflags/"
+# data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
 
 
 # ------------------------------------------------------------------------------
@@ -83,6 +91,7 @@ for i in range(len(flux)):
     dec = coord[i][1]
 
     # -- prep light curve --------------------------------------------------
+    t, y, cn = lcu.rm_qflag(t, y, cn, qflag_dir, sector, cam, ccd)
     t, y, flag = lcu.prep_lc(t, y, detrend=detrend, wind=wind)
     dy = np.ones(y.shape)*0.1
 

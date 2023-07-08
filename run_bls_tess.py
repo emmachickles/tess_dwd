@@ -15,10 +15,17 @@ pow_threshold=25
 # pow_threshold = 0
 objid_type = None
 
-wd_tab= "/scratch/echickle/WDs.txt"
-wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
-rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
-qflag_dir = "/scratch/echickle/QLPqflags/"
+# >> ENGAGING
+wd_tab= "/nobackup1c/users/echickle/WDs.txt"
+wd_main = "/nobackup1c/users/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/nobackup1c/users/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/nobackup1c/users/echickle/QLPqflags/"
+
+# >> UZAY
+# wd_tab= "/scratch/echickle/WDs.txt"
+# wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
+# rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+# qflag_dir = "/scratch/echickle/QLPqflags/"
 
 def run_process(p):
     sector, cam, ccd, ticid, data_dir, bls_dir = p
@@ -75,7 +82,7 @@ def run_process(p):
 
     except:
         print('!! Failed !!')
-        res = [ticid, ra, dec] + list(np.zeros(12))
+        res = [ticid, ra, dec] + list(np.zeros(11))
         return res
 
 if __name__ == '__main__':

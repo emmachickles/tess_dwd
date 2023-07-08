@@ -64,7 +64,12 @@ for i in range(len(p)):
 if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     pool = Pool(processes=N_p)
-    result = pool.map(run_process, p) # gaiaid, sig, snr, wid, period, period_min, q, phi0, dur, epo
-    np.savetxt(output_dir+'GPU_'+desc+'.result',np.array(result),
+    result = pool.map(run_process, p) # gaiaid, ra, dec, sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
+
+    # np.savetxt(output_dir+'GPU_'+desc+'.result',np.array(result),
+    #            fmt='%s', header='gaiaid ra dec sig snr wid period period_min q phi0 epo rp nt dphi')
+    # print(output_dir+'GPU_'+desc+'.result')
+
+    np.savetxt(output_dir+'GPU_'+str(N)+'.result',np.array(result),
                fmt='%s', header='gaiaid ra dec sig snr wid period period_min q phi0 epo rp nt dphi')
-    print(output_dir+'GPU_'+desc+'.result')
+    print(output_dir+'GPU_'+str(N)+'.result')
