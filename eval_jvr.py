@@ -10,9 +10,9 @@ import lc_utils as lcu
 # Set constants 
 Gaia.ROW_LIMIT = 5
 Gaia.MAIN_GAIA_TABLE = 'gaiadr3.gaia_source'
-out_dir = '/scratch/echickle/s0056_eval/'
-data_dir = '/scratch/echickle/'
-lc_dir = '/scratch/data/tess/lcur/ffi/s0056-lc-ZTF/'
+out_dir = '/scratch/echickle/tess/vet/'
+data_dir = '/scratch/echickle/tess/BLS_results/'
+lc_dir = '/scratch/data/tess/lcur/ffi/'
 qflag_dir = '/scratch/echickle/QLPqflags/'
 wd_tab = '/scratch/echickle/WDs.txt'
 wd_main = '/scratch/echickle/GaiaEDR3_WD_main.fits'
