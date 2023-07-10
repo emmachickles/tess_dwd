@@ -15,16 +15,23 @@ from run_ls import run_process
 N=int(sys.argv[1])
 ccd_list = []
 for sector in [56,57,58,59,60,61,62,63,64,65]: # 160 sublists
+    data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc-ZTF/"%sector
     for cam in [1,2,3,4]:
         for ccd in [1,2,3,4]:
-            ccd_list.append([sector,cam,ccd])
-# !! 
-ccd_list = [[57,2,2], [58,1,4], [58,4,1], [59,2,1], [61,1,3], [61,1,4], 
-            [61,3,2], [61,4,3], [62,1,2], [62,1,3], [62,1,4], [62,4,3],
-            [63,1,1], [63,1,3], [63,1,4], [64,2,4], [65,4,3]]
+            if os.path.exists(data_dir+'lc-{}-{}.npy'.format(cam,ccd)):
+                ccd_list.append([sector,cam,ccd])
 sector, cam, ccd = ccd_list[N-1]
-output_dir = "/pool001/echickle/tess/s%04d-WD/"%sector
-data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc/"%sector
+output_dir = "/pool001/echickle/tess/s%04d-ZTF/"%sector
+data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc-ZTF/"%sector
+
+# ccd_list = []
+# for sector in [56,57,58,59,60,61,62,63,64,65]: # 160 sublists
+#     for cam in [1,2,3,4]:
+#         for ccd in [1,2,3,4]:
+#             ccd_list.append([sector,cam,ccd])
+# sector, cam, ccd = ccd_list[N-1]
+# output_dir = "/pool001/echickle/tess/s%04d-WD/"%sector
+# data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc/"%sector
 
 # >> set up result directories
 ls_dir = output_dir + "LS_cam{}-ccd{}/".format(cam,ccd)

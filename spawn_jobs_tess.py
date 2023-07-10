@@ -13,14 +13,26 @@ from run_bls_tess import run_process
 
 # >> ENGAGING
 N=int(sys.argv[1])
+
 ccd_list = []
 for sector in [56,57,58,59,60,61,62,63,64,65]: # 160 sublists
+    data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc-ZTF/"%sector
     for cam in [1,2,3,4]:
         for ccd in [1,2,3,4]:
-            ccd_list.append([sector,cam,ccd])
+            if os.path.exists(data_dir+'lc-{}-{}.npy'.format(cam,ccd)):
+                ccd_list.append([sector,cam,ccd])
 sector, cam, ccd = ccd_list[N-1]
-output_dir = "/pool001/echickle/tess/s%04d-WD/"%sector
-data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc/"%sector
+output_dir = "/pool001/echickle/tess/s%04d-ZTF/"%sector
+data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc-ZTF/"%sector
+
+# ccd_list = []
+# for sector in [56,57,58,59,60,61,62,63,64,65]: # 160 sublists
+#     for cam in [1,2,3,4]:
+#         for ccd in [1,2,3,4]:
+#             ccd_list.append([sector,cam,ccd])
+# sector, cam, ccd = ccd_list[N-1]
+# output_dir = "/pool001/echickle/tess/s%04d-WD/"%sector
+# data_dir = "/nobackup1c/users/echickle/TESS_Lightcurves/s%04d-lc/"%sector
 
 # >> set up result directories
 bls_dir = output_dir + "BLS_cam{}-ccd{}/".format(cam,ccd)

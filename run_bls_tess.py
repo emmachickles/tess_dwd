@@ -13,7 +13,8 @@ wid_threshold=6
 pow_threshold=25
 # wid_threshold = 0
 # pow_threshold = 0
-objid_type = 'TICID'
+# objid_type = 'TICID'
+objid_type = None
 
 # >> ENGAGING
 wd_tab= "/nobackup1c/users/echickle/WDs.txt"

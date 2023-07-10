@@ -12,6 +12,7 @@ wind = 0.1
 pmin = 400 / 60 
 pmax = 10
 n_std=5
+objid_type= None
 
 wid_threshold=6
 pow_threshold=25
@@ -112,7 +113,7 @@ def run_process(p):
         +str(ccd)+'_ra_{}_dec_{}'.format(ra, dec)    
 
     res=lcu.vet_plot(t, y, ls_freqs, ls_power, output_dir=ls_dir,
-                 objid=ticid, objid_type='TICID', suffix=suffix, ra=ra,
+                 objid=ticid, objid_type=objid_type, suffix=suffix, ra=ra,
                  dec=dec, wd_main=wd_main, rp_ext=rp_ext, wd_tab=wd_tab,
                      bls=False, wid_threshold=wid_threshold, pow_threshold=pow_threshold)
     # print(res) # sig, wid, period, period_min, dphi
