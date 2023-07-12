@@ -1106,7 +1106,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period=per_atlas,
                          ylabel="ATLAS Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="ATLAS Relative Flux")
@@ -1190,7 +1190,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period=per_tess,
                          ylabel="TESS Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="TESS Relative Flux")
@@ -1198,7 +1198,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         print('Saved '+out_dir+suffix+'_binned_TESS.png')
         plt.close(fig00)
         
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="TESS Flux", alpha=0.6)
         w = max(1, int(0.05*len(y)))
@@ -1256,7 +1256,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period=per_ztf,
                          ylabel="ZTF Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="ZTF Relative Flux")
@@ -1264,7 +1264,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         print('Saved '+out_dir+suffix+'_binned_ZTF.png')
         plt.close(fig00)
         
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="ZTF Flux", alpha=0.6)
         w = max(1, int(0.05*len(y)))

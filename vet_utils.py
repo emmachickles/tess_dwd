@@ -97,7 +97,7 @@ def match_coord(ra_catalog, dec_catalog, per_catalog_true, result_list):
     return ra_catalog, dec_catalog, per_catalog_true, result_list
     
 
-def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_catalog_true, suffix='', gmag_catalog=None):
+def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_catalog_true, suffix='', gmag_catalog=None, y_max=2.):
     import matplotlib.pyplot as plt
     import pandas as pd
     import astropy.units as u
@@ -137,7 +137,8 @@ def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_c
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_dir+'gmag_per_'+suffix+'.png', dpi=300)
-    ax.set_ylim([0, 2.])
+    ax.set_ylim([0, y_max])
+    fig.tight_layout()
     fig.savefig(out_dir+'gmag_per_'+suffix+'_zoom.png', dpi=300)
         
 def get_gmag(result_list, mydir, overwrite=False):

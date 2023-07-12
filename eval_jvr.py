@@ -38,6 +38,34 @@ ax2.plot(result_list[:,3], result_list[:,5], '.k', ms=1, alpha=0.5)
 fig3, ax3 = plt.subplots(figsize=(5,4)) # nTransit vs dphi
 ax3.plot(result_list[:,7], result_list[:,8], '.k', ms=1, alpha=0.5)
 
+# -- JVR -----------------------------------------------------------------------
+
+jvr_dir = '/scratch/echickle/tess_jvr/BLS_results/'
+
+# Load Jan's WDRD catalog
+cat = np.loadtxt("/scratch/echickle/ZTF_Eclipses.txt", usecols=(1,2,3))
+ra_ztf, dec_ztf, period_ztf_true = cat[:,0], cat[:,1], cat[:,2]
+
+# Load Jan's WDRD results
+result_ztf = append_result_file(jvr_dir, sector_list)
+
+ra_ztf, dec_ztf, period_ztf_true, result_ztf = match_coord(ra_ztf, dec_ztf, period_ztf_true, result_ztf)
+match_ztf = match_period(result_ztf[:,6], period_ztf_true)
+np.savetxt(out_dir+'match_ztf.txt', np.array([result_ztf[:,0], ra_ztf, dec_ztf, period_ztf_true, match_ztf]).T)
+print('Saved '+out_dir+'match_ztf.txt')
+
+
+if np.count_nonzero(match_ztf) > 0:
+    ax1.plot(result_ztf[:,3][match_ztf], result_ztf[:,4][match_ztf], '<b', label='JVR')
+    ax2.plot(result_ztf[:,3][match_ztf], result_ztf[:,5][match_ztf], '<b', label='JVR')
+    ax3.plot(result_ztf[:,7][match_ztf], result_ztf[:,8][match_ztf], '<b', label='JVR')
+
+print('DWD Recovery: '+str(np.count_nonzero(match_ztf))+' / '+str(len(match_ztf)))
+
+gmag_ztf = get_gmag(result_ztf, jvr_dir)
+plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf, period_ztf_true,
+          gmag_catalog=gmag_ztf, suffix='JVR')
+
 # -- catalogs -----------------------------------------------------------------
 
 # >> signals discovered in S61
@@ -77,30 +105,6 @@ print('Recovered DWDs: '+','.join(ticid_dwd[match_dwd].astype('str')))
 
 plot_gmag(out_dir, wd_tab, result_list, result_ucb, match_ucb, period_ucb_true, suffix='UCB')
 plot_gmag(out_dir, wd_tab, result_list, result_dwd, match_dwd, period_dwd_true, suffix='DWD')
-
-# -- JVR -----------------------------------------------------------------------
-
-data_dir = '/scratch/echickle/tess_jvr/BLS_results/'
-
-# Load Jan's WDRD catalog
-cat = np.loadtxt("/scratch/echickle/ZTF_Eclipses.txt", usecols=(1,2,3))
-ra_ztf, dec_ztf, period_ztf_true = cat[:,0], cat[:,1], cat[:,2]
-
-# Load Jan's WDRD results
-result_ztf = append_result_file(data_dir, sector_list)
-
-ra_ztf, dec_ztf, period_ztf_true, result_ztf = match_coord(ra_ztf, dec_ztf, period_ztf_true, result_ztf)
-match_ztf = match_period(result_ztf[:,6], period_ztf_true)
-if np.count_nonzero(match_ztf) > 0:
-    ax1.plot(result_ztf[:,3][match_ztf], result_ztf[:,4][match_ztf], '<b', label='JVR')
-    ax2.plot(result_ztf[:,3][match_ztf], result_ztf[:,5][match_ztf], '<b', label='JVR')
-    ax3.plot(result_ztf[:,7][match_ztf], result_ztf[:,8][match_ztf], '<b', label='JVR')
-
-print('DWD Recovery: '+str(np.count_nonzero(match_ztf))+' / '+str(len(match_ztf)))
-
-gmag_ztf = get_gmag(result_ztf, data_dir)
-plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf, period_ztf_true,
-          gmag_catalog=gmag_ztf, suffix='JVR')
 
 # -- save figures --------------------------------------------------------------
 
