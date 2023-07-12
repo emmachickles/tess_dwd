@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def read_result_file(fname, bls=True):
     import pandas as pd
@@ -26,14 +27,21 @@ def append_result_file(result_dir, sector_list, cam_list=[1,2,3,4], ccd_list=[1,
                     fname = result_dir+'BLS-{}-{}-{}.result'.format(sector,cam,ccd)
                 else:
                     fname = result_dir+'LS-{}-{}-{}.result'.format(sector,cam,ccd)
-                result = read_result_file(fname, bls=bls)
-                for i in range(len(result)):
-                    result_list[i] = np.append(result_list[i], result[i])
+                if os.path.exists(fname):
+                    result = read_result_file(fname, bls=bls)
+
+                    # if np.count_nonzero( np.int64(result[0].to_numpy() ) == 0 ) >0:
+                    #     import pdb
+                    #     pdb.set_trace()
+
+                    for i in range(len(result)):
+                        result_list[i] = np.append(result_list[i], result[i])
     result_list = np.array(result_list)
+    result_list = result_list.T
     return result_list
     
 def match_period(period, period_true, dt=2./1440):
-    if type(period) == np.float:
+    if np.isscalar(period):
         period, period_true = [period], [period_true]
     
     match_list = []
@@ -57,7 +65,8 @@ def match_period(period, period_true, dt=2./1440):
 def match_catalog(result_list, ticid_catalog, period_true=None):
     ticid = np.int64(result_list[:,0])
     _, inds, inds1 = np.intersect1d(ticid, ticid_catalog, return_indices=True)
-    result_catalog = [result[inds] for result in result_list]
+    result_catalog = [result[inds] for result in result_list.T]
+    result_catalog = np.array(result_catalog).T
     ticid_catalog = ticid_catalog[inds1]
 
     if period_true is not None:
@@ -67,13 +76,34 @@ def match_catalog(result_list, ticid_catalog, period_true=None):
     else:
         return ticid_catalog, result_catalog
 
-def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, suffix='', gmag_catalog=None):
+def match_coord(ra_catalog, dec_catalog, per_catalog_true, result_list):
+# co_dwd = SkyCoord(ra=ra_dwd, dec=dec_dwd, unit=(u.degree, u.degree), frame='icrs')
+# idx, d2d, _ = co.match_to_catalog_sky(co_wd)
+# good_idx = np.nonzero(d2d.to(u.arcsec).value > 2)[0] # want unmatched
+# if len(good_idx) > 0:
+#     wd_idx.extend(idx[good_idx])
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+    co_result = SkyCoord(ra=result_list[:,1], dec=result_list[:,2], unit=(u.degree, u.degree), frame='icrs')
+    co_catalog = SkyCoord(ra=ra_catalog, dec=dec_catalog, unit=(u.degree, u.degree), frame='icrs')
+    idx, d2d, _ = co_catalog.match_to_catalog_sky(co_result)
+    good_idx = np.nonzero(d2d.to(u.arcsec).value < 2)[0]
+
+    ra_catalog = ra_catalog[good_idx]
+    dec_catalog = dec_catalog[good_idx]
+    per_catalog_true = per_catalog_true[good_idx]
+    result_list = result_list[idx[good_idx]]
+    
+    return ra_catalog, dec_catalog, per_catalog_true, result_list
+    
+
+def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_catalog_true, suffix='', gmag_catalog=None):
     import matplotlib.pyplot as plt
     import pandas as pd
     import astropy.units as u
     from astropy.coordinates import SkyCoord
     
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(5,4))
     ax.set_xlabel('Gaia Gmag')
     ax.set_ylabel('Period [days]')    
     
@@ -98,25 +128,26 @@ def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, suffi
         idx, d2d, _ = co.match_to_catalog_sky(co_wd)
         good_idx = np.nonzero(d2d.to(u.arcsec).value < 2)
         gmag_catalog = gmag_wd[idx[good_idx]]
-        per_catalog = result_catalog[:,6]
     
     if np.count_nonzero(match_catalog) > 0:
-        ax.plot(gmag_catalog[~match_catalog], per_catalog[~match_catalog], 'Xr', label=suffix+'-unrecovered\nTrue period')
+        per_catalog = result_catalog[:,6]
+        ax.plot(gmag_catalog[~match_catalog], per_catalog_true[~match_catalog], 'Xr', label=suffix+'-unrecovered\nTrue period')
         ax.plot(gmag_catalog[~match_catalog], per_catalog[~match_catalog], 'Xm', label=suffix+'-unrecovered\nBLS period')
         ax.plot(gmag_catalog[match_catalog], per_catalog[match_catalog], '>g', label=suffix+'-recovered')        
     ax.legend()
+    fig.tight_layout()
     fig.savefig(out_dir+'gmag_per_'+suffix+'.png', dpi=300)
-    ax.set_ylim([0, 0.4])
+    ax.set_ylim([0, 2.])
     fig.savefig(out_dir+'gmag_per_'+suffix+'_zoom.png', dpi=300)
         
-def get_gmag(result_list, mydir):
+def get_gmag(result_list, mydir, overwrite=False):
     import astropy.units as u
     from astropy.coordinates import SkyCoord  
     import os
     from astroquery.gaia import Gaia
     
     fname = mydir+'Gmag_JVR.txt'
-    if os.path.exists(fname):
+    if os.path.exists(fname) and not overwrite:
         gmag = np.loadtxt(fname)
     else:
         gmag = []

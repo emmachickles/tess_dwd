@@ -7,6 +7,7 @@ import astropy.units as u
 from astroquery.gaia import Gaia
 import lc_utils as lcu
 from vet_utils import *
+import pdb
 
 # Set constants 
 Gaia.ROW_LIMIT = 5
@@ -28,13 +29,13 @@ os.makedirs(out_dir, exist_ok=True)
 result_list = append_result_file(data_dir, sector_list)
 
 # Initialize metric plots 
-fig1, ax1 = plt.subplots() # Power vs. SNR
+fig1, ax1 = plt.subplots(figsize=(5,4)) # Power vs. SNR
 ax1.plot(result_list[:,3], result_list[:,4], '.k', ms=1, alpha=0.5)
 
-fig2, ax2 = plt.subplots() # Power vs. width
+fig2, ax2 = plt.subplots(figsize=(5,4)) # Power vs. width
 ax2.plot(result_list[:,3], result_list[:,5], '.k', ms=1, alpha=0.5)
 
-fig3, ax3 = plt.subplots() # nTransit vs dphi
+fig3, ax3 = plt.subplots(figsize=(5,4)) # nTransit vs dphi
 ax3.plot(result_list[:,7], result_list[:,8], '.k', ms=1, alpha=0.5)
 
 # -- catalogs -----------------------------------------------------------------
@@ -48,7 +49,7 @@ ax3.plot(result_tess[:,7], result_tess[:,8], 'vr', label='TESS')
 
 # >> KB UCBs systems in the white dwarf catalog
 ticid_ucb = np.array([719830487, 702774311, 713144139, 1939638541, 746047312, 1504732386, 1717410027, 1958881490, 2040677137, 1270451609])
-per_ucb_true = np.array([0.010030088, 0.014240466, 0.014282094, 0.0144914, 0.016464692, 0.018356874, 0.0281957, 0.029969971, 0.038365738, 0.04542631929])
+period_ucb_true = np.array([0.010030088, 0.014240466, 0.014282094, 0.0144914, 0.016464692, 0.018356874, 0.0281957, 0.029969971, 0.038365738, 0.04542631929])
 ticid_ucb, period_ucb_true, result_ucb = match_catalog(result_list, ticid_ucb, period_ucb_true)
 match_ucb = match_period(result_ucb[:,6], period_ucb_true)
 if np.count_nonzero(match_ucb) > 0:
@@ -58,24 +59,24 @@ if np.count_nonzero(match_ucb) > 0:
 
 # >> long period DWDs in the white dwarf catalog
 ticid_dwd = np.array([755049150, 903242599, 840220096, 219868627])
-per_dwd_true = np.array([0.0800126, 0.09986, 0.11601549, 0.246137])
+period_dwd_true = np.array([0.0800126, 0.09986, 0.11601549, 0.246137])
 ticid_dwd, period_dwd_true, result_dwd = match_catalog(result_list, ticid_dwd, period_dwd_true)
-match_ucb = match_period(result_dwd[:,6], period_dwd_true)
+match_dwd = match_period(result_dwd[:,6], period_dwd_true)
 
 if np.count_nonzero(match_dwd) > 0:
     ax1.plot(result_dwd[:,3][match_dwd], result_dwd[:,4][match_dwd], 'oc', label='DWD')
     ax2.plot(result_dwd[:,3][match_dwd], result_dwd[:,5][match_dwd], 'oc', label='DWD')
     ax3.plot(result_dwd[:,7][match_dwd], result_dwd[:,8][match_dwd], 'oc', label='DWD')
 
-print('KB UCB Recovery: '+str(np.count_nonzero(match_ucb))+' / '+str(len(per_ucb)))
+print('KB UCB Recovery: '+str(np.count_nonzero(match_ucb))+' / '+str(len(match_ucb)))
 print('Recovered UCBs: '+','.join(ticid_ucb[match_ucb].astype('str')))
-print('DWD Recovery: '+str(np.count_nonzero(match_dwd))+' / '+str(len(per_dwd)))
+print('DWD Recovery: '+str(np.count_nonzero(match_dwd))+' / '+str(len(match_dwd)))
 print('Recovered DWDs: '+','.join(ticid_dwd[match_dwd].astype('str')))
 
 # -- Gmag plots ---------------------------------------------------------------
 
-plot_gmag(out_dir, wd_tab, result_list, result_ucb, match, suffix='UCB')
-plot_gmag(out_dir, wd_tab, result_list, result_dwd, match, suffix='DWD')
+plot_gmag(out_dir, wd_tab, result_list, result_ucb, match_ucb, period_ucb_true, suffix='UCB')
+plot_gmag(out_dir, wd_tab, result_list, result_dwd, match_dwd, period_dwd_true, suffix='DWD')
 
 # -- JVR -----------------------------------------------------------------------
 
@@ -87,15 +88,55 @@ ra_ztf, dec_ztf, period_ztf_true = cat[:,0], cat[:,1], cat[:,2]
 
 # Load Jan's WDRD results
 result_ztf = append_result_file(data_dir, sector_list)
-match_ztf = match_period(result_ztf[:,6], per_ztf_true)
+
+ra_ztf, dec_ztf, period_ztf_true, result_ztf = match_coord(ra_ztf, dec_ztf, period_ztf_true, result_ztf)
+match_ztf = match_period(result_ztf[:,6], period_ztf_true)
 if np.count_nonzero(match_ztf) > 0:
     ax1.plot(result_ztf[:,3][match_ztf], result_ztf[:,4][match_ztf], '<b', label='JVR')
     ax2.plot(result_ztf[:,3][match_ztf], result_ztf[:,5][match_ztf], '<b', label='JVR')
     ax3.plot(result_ztf[:,7][match_ztf], result_ztf[:,8][match_ztf], '<b', label='JVR')
 
+print('DWD Recovery: '+str(np.count_nonzero(match_ztf))+' / '+str(len(match_ztf)))
+
 gmag_ztf = get_gmag(result_ztf, data_dir)
-plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf,
+plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf, period_ztf_true,
           gmag_catalog=gmag_ztf, suffix='JVR')
+
+# -- save figures --------------------------------------------------------------
+
+ax1.set_xlabel('Peak Significance = (peak - median)/MAD')
+ax1.set_ylabel('SNR = depth/MAD')
+ax1.legend()
+fig1.tight_layout()
+fig1.savefig(out_dir + 'pow_snr.png', dpi=300)
+print(out_dir + 'pow_snr.png')
+ax1.set_xlim([0, 7500])
+ax1.set_ylim([0, 500])
+fig1.savefig(out_dir + 'pow_snr_zoom.png', dpi=300)
+print(out_dir + 'pow_snr_zoom.png')
+
+ax2.set_xlabel('Peak Significance = (peak - median)/MAD')
+ax2.set_ylabel('Peak width')
+ax2.legend()
+fig2.tight_layout()
+fig2.savefig(out_dir + 'pow_wid.png', dpi=300)
+print(out_dir + 'pow_wid.png')
+ax2.set_xlim([0, 7500])
+ax2.set_ylim([0, 100])
+fig2.savefig(out_dir + 'pow_wid_zoom.png', dpi=300)
+print(out_dir + 'pow_wid_zoom.png')
+
+ax3.set_xlabel('Number of points in transit')
+ax3.set_ylabel('Dphi')
+ax3.legend()
+fig3.tight_layout()
+fig3.savefig(out_dir + 'nt_dphi.png', dpi=300)
+print(out_dir + 'nt_dphi.png')
+
+ax3.set_ylim([-0.005, 0.04])
+fig3.savefig(out_dir + 'nt_dphi_zoom.png', dpi=300)
+
+# ------------------------------------------------------------------------------
 
 # ra, dec, pow, snr, dphi, wid, nt, per = [np.empty(0)]*8
 # fnames_jvr = []
@@ -263,41 +304,8 @@ plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf,
 # # plt.tight_layout() 
 # # plt.savefig(out_dir+'unrecovered_JVR_bar.png')
 
-# -- save figures --------------------------------------------------------------
 
-ax1.set_xlabel('Peak Significance = (peak - median)/MAD')
-ax1.set_ylabel('SNR = depth/MAD')
-ax1.legend()
-fig1.tight_layout()
-fig1.savefig(out_dir + 'pow_snr.png')
-print(out_dir + 'pow_snr.png')
 
-# ax1.set_xlim([0, 200])
-# ax1.set_ylim([0, max(snr_tess)])
-# fig1.savefig(out_dir + 'pow_snr_zoom.png')
-# print(out_dir + 'pow_snr_zoom.png')
-
-ax2.set_xlabel('Peak Significance = (peak - median)/MAD')
-ax2.set_ylabel('Peak width')
-ax2.legend()
-fig2.tight_layout()
-fig2.savefig(out_dir + 'pow_wid.png')
-print(out_dir + 'pow_wid.png')
-
-# ax2.set_xlim([0, 200])
-# ax2.set_ylim([0, max(wid_tess)])
-# fig2.savefig(out_dir + 'pow_wid_zoom.png')
-# print(out_dir + 'pow_wid_zoom.png')
-
-ax3.set_xlabel('Number of points in transit')
-ax3.set_ylabel('Dphi')
-ax3.legend()
-fig3.tight_layout()
-fig3.savefig(out_dir + 'nt_dphi.png')
-print(out_dir + 'nt_dphi.png')
-
-ax3.set_ylim([0, 0.04])
-fig3.savefig(out_dir + 'nt_dphi_zoom.png')
 
 # plt.figure()
 # _=plt.hist(power_all[np.nonzero(power_all < 3000)], bins=100)
