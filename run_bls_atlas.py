@@ -63,7 +63,7 @@ def run_process(p):
                        pow_threshold=pow_threshold, per_threshold=per_threshold,
                        snr_threshold=snr_threshold, wid_threshold=wid_threshold,
                        wd_main=wd_main, rp_ext=rp_ext, ra=ra, dec=dec)
-    # res: sig, snr, wid, period, period_min, q, phi0, dur, epo, epo, rp, nt, dphi
+    # res: sig, snr, wid, period, period_min, q, phi0, epo, rp, nt, dphi
     # end=time.time()
     print('Postprocessed light curves')
     # print(end-start)

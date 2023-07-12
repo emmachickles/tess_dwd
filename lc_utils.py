@@ -833,7 +833,31 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     # end = time.time()
     # print(end-start)
 
-    
+
+    if objid_type is not None:
+        if objid_type=='GAIAID':
+            gid = np.int64(objid)
+        elif objid_type=='TICID':
+            wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
+            ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == objid)[0][0]
+            # if type(wd_cat.iloc[ind][3]) != type(""):
+            # if not np.isnan(wd_cat.iloc[ind][3]):
+            try:    
+                gid = np.int64(wd_cat.iloc[ind][3])
+            except:
+                gid, objid_type = None, None
+            
+        if gid is not None:
+            ind = np.nonzero(source_id == gid)[0]
+            if len(ind) > 0:
+                ind = ind[0]
+                c_targ = bp_rp[ind]
+                g_targ = gmag[ind]
+                p_targ = parallax[ind]
+                m_targ = abs_mag[ind]
+            else: # No GaiaID found! 
+                objid_type = None
+
     if objid_type is None:
         import astropy.units as u
         from astropy.coordinates import SkyCoord
@@ -862,23 +886,8 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
                 m_targ = g_targ + 5*(np.log10(p_targ)-2)
         else:
             m_targ = np.nan
-    else:
-        if objid_type=='GAIAID':
-            gid = np.int64(objid)
-        elif objid_type=='TICID':
-            wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
-            ind = np.nonzero(wd_cat[0].to_numpy().astype('int') == objid)[0][0]
-            # if type(wd_cat.iloc[ind][3]) == type(""):
-            gid = np.int64(wd_cat.iloc[ind][3])
-        ind = np.nonzero(source_id == gid)[0][0]
-        c_targ = bp_rp[ind]
-        g_targ = gmag[ind]
-        p_targ = parallax[ind]
-        m_targ = abs_mag[ind]
         
-    if not np.isnan(m_targ):
-
-
+    if not np.isnan(m_targ) and str(c_targ) != '--':
 
         # ax.plot(bp_rp, abs_mag, '.k', alpha=0.2, ms=0.05)
         # ax.set_xlim([-0.6, 1.9])
@@ -1098,7 +1107,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period=per_atlas,
                          ylabel="ATLAS Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="ATLAS Relative Flux")
@@ -1183,7 +1192,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax0, folded_t, folded_y, folded_dy, period=per_tess,
                          ylabel="TESS Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="TESS Relative Flux")
@@ -1191,7 +1200,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         print('Saved '+out_dir+suffix+'_binned_TESS.png')
         plt.close(fig00)
         
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="TESS Flux", alpha=0.6)
         w = max(1, int(0.05*len(y)))
@@ -1249,7 +1258,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         plot_phase_curve(ax2, folded_t, folded_y, folded_dy, period=per_ztf,
                          ylabel="ZTF Relative Flux")
 
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins, dy=dy)
         plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
                          ylabel="ZTF Relative Flux")
@@ -1257,7 +1266,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         print('Saved '+out_dir+suffix+'_binned_ZTF.png')
         plt.close(fig00)
         
-        fig00, ax00=plt.subplots()
+        fig00, ax00=plt.subplots(figsize=(4,4))
         plot_phase_curve(ax00, t%per, y, dy, period=per,
                          ylabel="ZTF Flux", alpha=0.6)
         w = max(1, int(0.05*len(y)))

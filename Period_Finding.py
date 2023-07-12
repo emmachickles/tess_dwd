@@ -91,15 +91,15 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,freqs_to_remove=No
         return t, y, dy, period, bls_power_best, freqs, bls_power, q_best, phi0_best
 
 def LS(t,y,dy,pmin=2,freqs_to_remove=None, oversampling_factor=7.0):
+        import skcuda.fft
         import cuvarbase.lombscargle as gls
-        import pycuda.driver as cuda
-        import pycuda.autoinit
+        # import pycuda.driver as cuda
+        # import pycuda.autoinit
 
-        # Explicitly initialize the CUDA context
-        ctx = cuda.Device(0).make_context()
+        # # Explicitly initialize the CUDA context
+        # ctx = cuda.Device(0).make_context()
 
         t=t-np.mean(t)
-        lightcurves=[(t,y,dy)]
         baseline=np.max(t)-np.min(t)
 
         df = 1.0 / (baseline*oversampling_factor)
@@ -113,7 +113,8 @@ def LS(t,y,dy,pmin=2,freqs_to_remove=None, oversampling_factor=7.0):
         print(y.shape)
         print(freqs.shape)
         proc = gls.LombScargleAsyncProcess()
-        result = proc.run([(t, y, dy)],freqs=freqs)
+        # result = proc.run([(t, y, dy)],freqs=freqs)
+        result = proc.batched_run_const_nfreq([(t,y,dy)], freqs=freqs)
         proc.finish()
         freqs, ls_power = result[0]
 
@@ -127,7 +128,52 @@ def LS(t,y,dy,pmin=2,freqs_to_remove=None, oversampling_factor=7.0):
 
         period=1.0/freqs[np.argmax(ls_power)]
 
-        cuda.Context.pop()
+        # cuda.Context.pop()
+
+        return t, y, dy, period, freqs, ls_power
+
+def LS_batched(data,pmin=2,freqs_to_remove=None, oversampling_factor=7.0):
+        import skcuda.fft
+        import cuvarbase.lombscargle as gls
+        # import pycuda.driver as cuda
+        # import pycuda.autoinit
+
+        # # Explicitly initialize the CUDA context
+        # ctx = cuda.Device(0).make_context()
+
+        baseline_list = []
+        for lightcurve in data:
+                t, y, dy = lightcurve
+        t=t-np.mean(t)
+        baseline=np.max(t)-np.min(t)
+
+        df = 1.0 / (baseline*oversampling_factor)
+        fmin = 4.0/baseline
+        fmax = 1440./pmin
+
+        nf = int(np.ceil((fmax - fmin) / df))
+        freqs=np.linspace(fmin,fmax,nf)
+
+        print(t.shape)
+        print(y.shape)
+        print(freqs.shape)
+        proc = gls.LombScargleAsyncProcess()
+        # result = proc.run([(t, y, dy)],freqs=freqs)
+        result = proc.batched_run_const_nfreq([(t,y,dy)], freqs=freqs)
+        proc.finish()
+        freqs, ls_power = result[0]
+
+
+        if freqs_to_remove is not None:
+
+                for pair in freqs_to_remove:
+                        idx = np.where((freqs < pair[0]) | (freqs > pair[1]))[0]
+                        freqs = freqs[idx]
+                        ls_power = ls_power[idx]
+
+        period=1.0/freqs[np.argmax(ls_power)]
+
+        # cuda.Context.pop()
 
         return t, y, dy, period, freqs, ls_power
 

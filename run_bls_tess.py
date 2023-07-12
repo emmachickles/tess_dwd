@@ -13,12 +13,20 @@ wid_threshold=6
 pow_threshold=25
 # wid_threshold = 0
 # pow_threshold = 0
+# objid_type = 'TICID'
 objid_type = None
 
-wd_tab= "/scratch/echickle/WDs.txt"
-wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
-rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
-qflag_dir = "/scratch/echickle/QLPqflags/"
+# >> ENGAGING
+wd_tab= "/nobackup1c/users/echickle/WDs.txt"
+wd_main = "/nobackup1c/users/echickle/GaiaEDR3_WD_main.fits"
+rp_ext = "/nobackup1c/users/echickle/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/nobackup1c/users/echickle/QLPqflags/"
+
+# >> UZAY
+# wd_tab= "/scratch/echickle/WDs.txt"
+# wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
+# rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
+# qflag_dir = "/scratch/echickle/QLPqflags/"
 
 def run_process(p):
     sector, cam, ccd, ticid, data_dir, bls_dir = p
@@ -51,7 +59,7 @@ def run_process(p):
     t, y, cn = lcu.rm_qflag(t, y, cn, qflag_dir, sector, cam, ccd)
     t, y, flag = lcu.prep_lc(t, y, n_std=n_std, detrend=detrend, wind=wind)
     if flag:
-        res = [ticid, coord[0], coord[1]] + list(np.zeros(12))
+        res = [ticid, ra, dec] + list(np.zeros(11))
         return res
 
     try:
@@ -64,7 +72,7 @@ def run_process(p):
         
         suffix = '_TIC%016d'%ticid+'_s%04d_'%sector+'cam_'+\
                  str(cam)+'_ccd_'+str(ccd)+\
-                 '_ra_{}_dec_{}_'.format(coord[0], coord[1])
+                 '_ra_{}_dec_{}_'.format(ra, dec)
         res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=bls_dir,
                            objid=ticid, objid_type=objid_type, suffix=suffix, 
                            ra=ra, dec=dec,
@@ -75,7 +83,7 @@ def run_process(p):
 
     except:
         print('!! Failed !!')
-        res = [ticid, ra, dec] + list(np.zeros(12))
+        res = [ticid, ra, dec] + list(np.zeros(11))
         return res
 
 if __name__ == '__main__':

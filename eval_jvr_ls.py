@@ -12,8 +12,8 @@ import pdb
 # Set constants 
 Gaia.ROW_LIMIT = 5
 Gaia.MAIN_GAIA_TABLE = 'gaiadr3.gaia_source'
-out_dir = '/scratch/echickle/tess/vet/'
-data_dir = '/scratch/echickle/tess/BLS_results/'
+out_dir = '/scratch/echickle/tess/vet_LS/'
+data_dir = '/scratch/echickle/tess/LS_results/'
 lc_dir = '/scratch/data/tess/lcur/ffi/'
 qflag_dir = '/scratch/echickle/QLPqflags/'
 wd_tab = '/scratch/echickle/WDs.txt'
@@ -26,75 +26,66 @@ pmax = 0.15*1440
 os.makedirs(out_dir, exist_ok=True)
 
 # Load Gaia white dwarf results 
-result_list = append_result_file(data_dir, sector_list)
+result_list = append_result_file(data_dir, sector_list, bls=False)
 
 # Initialize metric plots 
-fig1, ax1 = plt.subplots(figsize=(5,4)) # Power vs. SNR
-ax1.plot(result_list[:,3], result_list[:,4], '.k', ms=1, alpha=0.5)
-
 fig2, ax2 = plt.subplots(figsize=(5,4)) # Power vs. width
-ax2.plot(result_list[:,3], result_list[:,5], '.k', ms=1, alpha=0.5)
+ax2.plot(result_list[:,3], result_list[:,4], '.k', ms=1, alpha=0.5)
 
-fig3, ax3 = plt.subplots(figsize=(5,4)) # nTransit vs dphi
-ax3.plot(result_list[:,7], result_list[:,8], '.k', ms=1, alpha=0.5)
+fig3, ax3 = plt.subplots(figsize=(5,4)) # Period vs dphi
+ax3.plot(result_list[:,5], result_list[:,6], '.k', ms=1, alpha=0.5)
 
 # -- JVR -----------------------------------------------------------------------
 
-jvr_dir = '/scratch/echickle/tess_jvr/BLS_results/'
+data_dir = '/scratch/echickle/tess_jvr/LS_results/'
 
 # Load Jan's WDRD catalog
 cat = np.loadtxt("/scratch/echickle/ZTF_Eclipses.txt", usecols=(1,2,3))
 ra_ztf, dec_ztf, period_ztf_true = cat[:,0], cat[:,1], cat[:,2]
 
 # Load Jan's WDRD results
-result_ztf = append_result_file(jvr_dir, sector_list)
-
+result_ztf = append_result_file(data_dir, sector_list, bls=False)
 ra_ztf, dec_ztf, period_ztf_true, result_ztf = match_coord(ra_ztf, dec_ztf, period_ztf_true, result_ztf)
-match_ztf = match_period(result_ztf[:,6], period_ztf_true)
+match_ztf = match_period(result_ztf[:,5], period_ztf_true)
 np.savetxt(out_dir+'match_ztf.txt', np.array([result_ztf[:,0], ra_ztf, dec_ztf, period_ztf_true, match_ztf]).T)
 print('Saved '+out_dir+'match_ztf.txt')
 
-
 if np.count_nonzero(match_ztf) > 0:
-    ax1.plot(result_ztf[:,3][match_ztf], result_ztf[:,4][match_ztf], '<b', label='JVR')
-    ax2.plot(result_ztf[:,3][match_ztf], result_ztf[:,5][match_ztf], '<b', label='JVR')
-    ax3.plot(result_ztf[:,7][match_ztf], result_ztf[:,8][match_ztf], '<b', label='JVR')
+    ax2.plot(result_ztf[:,3][match_ztf], result_ztf[:,4][match_ztf], '<b', label='JVR')
+    ax3.plot(result_ztf[:,5][match_ztf], result_ztf[:,6][match_ztf], '<b', label='JVR')
 
 print('DWD Recovery: '+str(np.count_nonzero(match_ztf))+' / '+str(len(match_ztf)))
 
-gmag_ztf = get_gmag(result_ztf, jvr_dir)
+gmag_ztf = get_gmag(result_ztf, data_dir)
 plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf, period_ztf_true,
-          gmag_catalog=gmag_ztf, suffix='JVR')
+          gmag_catalog=gmag_ztf, suffix='JVR', y_max=0.015)
 
 # -- catalogs -----------------------------------------------------------------
 
 # >> signals discovered in S61
 ticid_tess = np.array([803489769, 36085812, 800042858, 270679102, 455206965, 452954413, 767706310, 96852226, 677736827])
 ticid_tess, result_tess = match_catalog(result_list, ticid_tess)
-ax1.plot(result_tess[:,3], result_tess[:,4], 'vr', label='TESS')
-ax2.plot(result_tess[:,3], result_tess[:,5], 'vr', label='TESS')
-ax3.plot(result_tess[:,7], result_tess[:,8], 'vr', label='TESS')
+ax2.plot(result_tess[:,3], result_tess[:,4], 'vr', label='TESS')
+ax3.plot(result_tess[:,5], result_tess[:,6], 'vr', label='TESS')
 
 # >> KB UCBs systems in the white dwarf catalog
 ticid_ucb = np.array([719830487, 702774311, 713144139, 1939638541, 746047312, 1504732386, 1717410027, 1958881490, 2040677137, 1270451609])
 period_ucb_true = np.array([0.010030088, 0.014240466, 0.014282094, 0.0144914, 0.016464692, 0.018356874, 0.0281957, 0.029969971, 0.038365738, 0.04542631929])
 ticid_ucb, period_ucb_true, result_ucb = match_catalog(result_list, ticid_ucb, period_ucb_true)
-match_ucb = match_period(result_ucb[:,6], period_ucb_true)
+match_ucb = match_period(result_ucb[:,5], period_ucb_true)
 if np.count_nonzero(match_ucb) > 0:
-    ax1.plot(result_ucb[:,3][match_ucb], result_ucb[:,4][match_ucb], '>g', label='UCB')
-    ax2.plot(result_ucb[:,3][match_ucb], result_ucb[:,5][match_ucb], '>g', label='UCB')
-    ax3.plot(result_ucb[:,7][match_ucb], result_ucb[:,8][match_ucb], '>g', label='UCB')
+    ax2.plot(result_ucb[:,3][match_ucb], result_ucb[:,4][match_ucb], '>g', label='UCB')
+    ax3.plot(result_ucb[:,5][match_ucb], result_ucb[:,6][match_ucb], '>g', label='UCB')
 
 # >> long period DWDs in the white dwarf catalog
 ticid_dwd = np.array([755049150, 903242599, 840220096, 219868627])
 period_dwd_true = np.array([0.0800126, 0.09986, 0.11601549, 0.246137])
 ticid_dwd, period_dwd_true, result_dwd = match_catalog(result_list, ticid_dwd, period_dwd_true)
-match_dwd = match_period(result_dwd[:,6], period_dwd_true)
+match_dwd = match_period(result_dwd[:,5], period_dwd_true)
 
 if np.count_nonzero(match_dwd) > 0:
-    ax1.plot(result_dwd[:,3][match_dwd], result_dwd[:,4][match_dwd], 'oc', label='DWD')
-    ax2.plot(result_dwd[:,3][match_dwd], result_dwd[:,5][match_dwd], 'oc', label='DWD')
-    ax3.plot(result_dwd[:,7][match_dwd], result_dwd[:,8][match_dwd], 'oc', label='DWD')
+    ax2.plot(result_dwd[:,3][match_dwd], result_dwd[:,4][match_dwd], 'oc', label='DWD')
+    ax3.plot(result_dwd[:,5][match_dwd], result_dwd[:,6][match_dwd], 'oc', label='DWD')
 
 print('KB UCB Recovery: '+str(np.count_nonzero(match_ucb))+' / '+str(len(match_ucb)))
 print('Recovered UCBs: '+','.join(ticid_ucb[match_ucb].astype('str')))
@@ -108,16 +99,6 @@ plot_gmag(out_dir, wd_tab, result_list, result_dwd, match_dwd, period_dwd_true, 
 
 # -- save figures --------------------------------------------------------------
 
-ax1.set_xlabel('Peak Significance = (peak - median)/MAD')
-ax1.set_ylabel('SNR = depth/MAD')
-ax1.legend()
-fig1.tight_layout()
-fig1.savefig(out_dir + 'pow_snr.png', dpi=300)
-print(out_dir + 'pow_snr.png')
-ax1.set_xlim([0, 7500])
-ax1.set_ylim([0, 500])
-fig1.savefig(out_dir + 'pow_snr_zoom.png', dpi=300)
-print(out_dir + 'pow_snr_zoom.png')
 
 ax2.set_xlabel('Peak Significance = (peak - median)/MAD')
 ax2.set_ylabel('Peak width')
@@ -130,15 +111,16 @@ ax2.set_ylim([0, 100])
 fig2.savefig(out_dir + 'pow_wid_zoom.png', dpi=300)
 print(out_dir + 'pow_wid_zoom.png')
 
-ax3.set_xlabel('Number of points in transit')
+ax3.set_xlabel('Period [days]')
 ax3.set_ylabel('Dphi')
 ax3.legend()
 fig3.tight_layout()
-fig3.savefig(out_dir + 'nt_dphi.png', dpi=300)
-print(out_dir + 'nt_dphi.png')
+fig3.savefig(out_dir + 'per_dphi.png', dpi=300)
+print(out_dir + 'per_dphi.png')
 
 ax3.set_ylim([-0.005, 0.04])
-fig3.savefig(out_dir + 'nt_dphi_zoom.png', dpi=300)
+fig3.tight_layout()
+fig3.savefig(out_dir + 'per_dphi_zoom.png', dpi=300)
 
 # ------------------------------------------------------------------------------
 
@@ -289,7 +271,8 @@ fig3.savefig(out_dir + 'nt_dphi_zoom.png', dpi=300)
 # #         BLS(t,y,dy,pmin=pmin,pmax=pmax,freqs_to_remove=freqs_to_remove)
 # #     suffix = '_TIC%016d'%ticid+'_s%04d_'%sector+'cam_'+\
 # #              str(cam)+'_ccd_'+str(ccd)+\
-# #              '_ra_{}_dec_{}_'.format(coord[0], coord[1])
+# #            
+#   '_ra_{}_dec_{}_'.format(coord[0], coord[1])
 # #     res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=out_dir+'unrecovered_JVR_bls/',
 # #                    objid=ticid, objid_type=None, suffix=suffix, 
 # #                    ra=coord[0], dec=coord[1],
@@ -329,6 +312,7 @@ fig3.savefig(out_dir + 'nt_dphi_zoom.png', dpi=300)
 
 # co_dwd = SkyCoord(ra=ra_dwd, dec=dec_dwd, unit=(u.degree, u.degree), frame='icrs')
 # idx, d2d, _ = co.match_to_catalog_sky(co_wd)
+
 # good_idx = np.nonzero(d2d.to(u.arcsec).value > 2)[0] # want unmatched
 # if len(good_idx) > 0:
 #     wd_idx.extend(idx[good_idx])
@@ -352,8 +336,10 @@ fig3.savefig(out_dir + 'nt_dphi_zoom.png', dpi=300)
 #     for ccd in [1,2,3,4]:
 #         suffix = '-{}-{}'.format(cam,ccd)
 #         plot_dir =  data_dir + 's%04d-WD/'%sector + 's%04d-bls'%sector+suffix+'/'
+
 #         plot_fnames = np.array(os.listdir(plot_dir))
 #         plot_ticid = np.array([int(plot.split('_')[8][3:]) for plot in plot_fnames])
 #         for f, ticid in zip(plot_fnames, plot_ticid):
 #             if ticid in ticid_all[wd_idx]: # if unmatched
 #                 os.system('cp '+plot_dir+f+' '+save_dir)
+
