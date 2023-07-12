@@ -158,13 +158,14 @@ def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True):
         from astroquery.mast import Catalogs
         catalog_data = Catalogs.query_region(f"{ra} {dec}", catalog="TIC", radius=0.001, objectname=False)
         ticid = int(catalog_data['ID'][0])
-    sectors = list(range(56, 64))
+
+    sectors = list(range(56, 66))
     sector_targ, cam_targ, ccd_targ = None, None, None
     for sector in sectors:
         for cam in [1,2,3,4]:
             for ccd in [1,2,3,4]:
                 fname = data_dir+'s%04d/s%04d-lc/id-%d-%d.npy'%(sector, sector, cam, ccd)
-                co = np.load(fname)
+                co = np.int64(np.load(fname))
                 if len(np.where(co == ticid)[0]) > 0:
                     sector_targ, cam_targ, ccd_targ = sector, cam, ccd
     if sector_targ is None:
@@ -1127,6 +1128,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         f_suffix = '-{}-{}.npy'.format(cam, ccd)        
         t = np.load(tess_dir+'ts'+f_suffix)
         ticid_list = np.load(tess_dir+'id'+f_suffix)
+        ticid, ticid_list = np.int64(ticid), np.int64(ticid_list)
         ind = np.nonzero(ticid_list == ticid)[0][0]
         y = np.load(tess_dir+'lc'+f_suffix)[ind]
         t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
