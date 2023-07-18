@@ -3,10 +3,13 @@
 atlas_dir = "/data/ATLAS/WDs/"
 output_dir='/home/echickle/out/'
 
-ra =102.88891
+# ra =102.88891
 dec = 28.73981
 period =   765.2038361137168 / 1440. / 60.
 
+ra=141.06274385670
+dec=35.28094464811
+period = 215.2 /1440./60.
 # ------------------------------------------------------------------------------
 
 import lc_utils as lcu
@@ -21,7 +24,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # load data
 fname_atlas = lcu.get_atlas_lc(atlas_dir, ra=ra, dec=dec)
-t, y, dy, ra, dec = lcu.load_atlas_lc(fname_atlas, clip=True, pos_iqr=3, neg_iqr=20, skiprows=0)
+t, y, dy, ra, dec = lcu.load_atlas_lc(fname_atlas, clip=True, pos_iqr=5, neg_iqr=5, skiprows=0)
 
 # ------------------------------------------------------------------------------
 

@@ -1,80 +1,124 @@
-# ------------------------------------------------------------------------------
-
-lc_dir = "/scratch/echickle/grnd_lc/"
-
-lc_f = lc_dir + "GPU-56-1-1.result" # !!
-sector, cam = 56, 1 # !!
-
-out_dir = "/scratch/echickle/LDSS_230421_ATLAS/"
-# out_dir = "/scratch/echickle/s%04d/"%sector \
-#           +"s%04d-"%sector+str(cam)+"-crossmatch/"
-tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
-
-gaia_tab = "/scratch/echickle/100pc_clean.fits"
-bls=True
-
-# ------------------------------------------------------------------------------
-
-import lc_utils as lcu
+from lc_utils import get_tess_lc, normalize_lc, bin_timeseries, plot_phase_curve, prep_lc
 import numpy as np
-import sys
-import os
+import matplotlib.pyplot as plt
 import pdb
 
-# ------------------------------------------------------------------------------
+out_dir = "/home/echickle/out/vet/"
+tess_dir = "/home/echickle/data/"
+bins=100
+ztf=True
+figsize=(5,2)
 
-lc_tab = np.loadtxt(lc_f, delimiter=",", dtype="str", skiprows=1)
-if len(lc_tab.shape) == 1:
-    lc_tab = np.expand_dims(lc_tab, 0)
-ticid = np.unique(lc_tab[:,0])
-os.makedirs(out_dir, exist_ok=True)
+ra_list = [121.1748862]
+dec_list = [-2.262534927]
+per_list = [174.2054897/1440.]
 
-pmin = 400 / 60 
-pmax = 10
-qmin = 0.01
-qmax = 0.15
+for ra, dec, per in zip(ra_list, dec_list, per_list):
+    # ra, dec = 121.174886, -2.262535
+    suffix='ra_{}_dec_{}'.format(ra,dec)
+    ticid, sector, cam, ccd = get_tess_lc(tess_dir, ra=ra, dec=dec, ztf=ztf)
 
-# >> remove completed
-# fnames = os.listdir(out_dir)
-# ticid_out = [int(f.split('_')[13][3:]) for f in fnames if f.split('_')[0] == 'TESS']
-# ticid_out = np.array(ticid_out)
-# inter, comm1, comm2 = np.intersect1d(ticid, ticid_out, return_indices=True)
-# ticid = np.delete(ticid, comm1) 
-
-# !!
-# ticid = ['767706310']
-
-for i in range(len(ticid)):
-    print(str(i)+'/'+str(len(ticid)))
-    lc_info = lc_tab[lc_tab[:,0] == ticid[i]]
-    fname_tess = lc_info[lc_info[:,1] == 'TESS'][0][2]
-    fname_atlas = lc_info[lc_info[:,1] == 'ATLAS'][:,2]
-    if len(fname_atlas) > 0:
-        fname_atlas = lc_dir+fname_atlas[0]
+    if ztf:
+        ccd_dir = tess_dir+'s00{}/s00{}-lc-ZTF/'.format(sector, sector)
     else:
-        fname_atlas = None
-    fnames_ztf = list(lc_info[lc_info[:,1] == 'ZTF'][:,2])
-    for j in range(len(fnames_ztf)):
-        fnames_ztf[j] = lc_dir+fnames_ztf[j]
+        ccd_dir = tess_dir+'s00{}/s00{}-lc/'.format(sector, sector)
+        
+    f_suffix = '-{}-{}.npy'.format(cam, ccd)        
+    t = np.load(ccd_dir+'ts'+f_suffix)
+    ticid_list = np.load(ccd_dir+'id'+f_suffix)
+    ticid, ticid_list = np.int64(ticid), np.int64(ticid_list)
+    ind = np.nonzero(ticid_list == ticid)[0][0]
+    y = np.load(ccd_dir+'lc'+f_suffix)[ind]
+    t, y, flag = prep_lc(t, y)
+    
+    y, _ = normalize_lc(y)
+    folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins)
 
-    fname_tess = fname_tess.split('_')    
-    if bls:
-        ticid = int(fname_tess[12][3:])
-        cam = fname_tess[15]
-        ccd = fname_tess[17]
-        per = float(fname_tess[7]) / 1440        
-        ra = float(fname_tess[19])
-        dec = float(fname_tess[21])    
-        suffix = '_'.join(fname_tess[12:22])
-    else:
-        ticid = int(fname_tess[4][3:])
-        cam = fname_tess[6]
-        ccd = fname_tess[8]
-        per = float(fname_tess[3]) / 1440        
-        ra = float(fname_tess[10])
-        dec = float(fname_tess[12])    
-        suffix = '_'.join(fname_tess[4:13])
+    
+    fig00, ax00=plt.subplots(figsize=figsize)
+    folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins)
+    plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+                     ylabel="TESS Relative Flux")
+    fig00.savefig(out_dir+suffix+'_binned_TESS.png', dpi=300)
+    print('Saved '+out_dir+suffix+'_binned_TESS.png')
 
-    pdb.set_trace()
-    lcu.make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
-                        gaia_tab,out_dir,suffix,bls=bls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)
+
+# # ------------------------------------------------------------------------------
+
+# lc_dir = "/scratch/echickle/grnd_lc/"
+
+# lc_f = lc_dir + "GPU-56-1-1.result" # !!
+# sector, cam = 56, 1 # !!
+
+# out_dir = "/scratch/echickle/LDSS_230421_ATLAS/"
+# # out_dir = "/scratch/echickle/s%04d/"%sector \
+# #           +"s%04d-"%sector+str(cam)+"-crossmatch/"
+# tess_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector
+
+# gaia_tab = "/scratch/echickle/100pc_clean.fits"
+# bls=True
+
+# # ------------------------------------------------------------------------------
+
+# import lc_utils as lcu
+# import numpy as np
+# import sys
+# import os
+# import pdb
+
+# # ------------------------------------------------------------------------------
+
+# lc_tab = np.loadtxt(lc_f, delimiter=",", dtype="str", skiprows=1)
+# if len(lc_tab.shape) == 1:
+#     lc_tab = np.expand_dims(lc_tab, 0)
+# ticid = np.unique(lc_tab[:,0])
+# os.makedirs(out_dir, exist_ok=True)
+
+# pmin = 400 / 60 
+# pmax = 10
+# qmin = 0.01
+# qmax = 0.15
+
+# # >> remove completed
+# # fnames = os.listdir(out_dir)
+# # ticid_out = [int(f.split('_')[13][3:]) for f in fnames if f.split('_')[0] == 'TESS']
+# # ticid_out = np.array(ticid_out)
+# # inter, comm1, comm2 = np.intersect1d(ticid, ticid_out, return_indices=True)
+# # ticid = np.delete(ticid, comm1) 
+
+# # !!
+# # ticid = ['767706310']
+
+# for i in range(len(ticid)):
+#     print(str(i)+'/'+str(len(ticid)))
+#     lc_info = lc_tab[lc_tab[:,0] == ticid[i]]
+#     fname_tess = lc_info[lc_info[:,1] == 'TESS'][0][2]
+#     fname_atlas = lc_info[lc_info[:,1] == 'ATLAS'][:,2]
+#     if len(fname_atlas) > 0:
+#         fname_atlas = lc_dir+fname_atlas[0]
+#     else:
+#         fname_atlas = None
+#     fnames_ztf = list(lc_info[lc_info[:,1] == 'ZTF'][:,2])
+#     for j in range(len(fnames_ztf)):
+#         fnames_ztf[j] = lc_dir+fnames_ztf[j]
+
+#     fname_tess = fname_tess.split('_')    
+#     if bls:
+#         ticid = int(fname_tess[12][3:])
+#         cam = fname_tess[15]
+#         ccd = fname_tess[17]
+#         per = float(fname_tess[7]) / 1440        
+#         ra = float(fname_tess[19])
+#         dec = float(fname_tess[21])    
+#         suffix = '_'.join(fname_tess[12:22])
+#     else:
+#         ticid = int(fname_tess[4][3:])
+#         cam = fname_tess[6]
+#         ccd = fname_tess[8]
+#         per = float(fname_tess[3]) / 1440        
+#         ra = float(fname_tess[10])
+#         dec = float(fname_tess[12])    
+#         suffix = '_'.join(fname_tess[4:13])
+
+#     lcu.make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,per,ra,dec,
+#                         gaia_tab,out_dir,suffix,bls=bls,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax)

@@ -458,7 +458,7 @@ def process(f,sky_aperture,background,central_coord, tica=True, save_dir=None):
 
 
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
-            suffix='', tica=False, save_dir=None):
+            suffix='', tica=False, save_dir=None, max_sources=15000):
     suffix = '-'+str(cam)+'-'+str(ccd)+suffix
     
     LC=[]
@@ -466,93 +466,122 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
     cadence_list=[]
     orbit_list = []
     
-    trimmed_catalog, ticid, central_coord=source_list(p[1],catalog_main, ticid_main, tica=tica)
-    pdb.set_trace()
-
+    trimmed_catalog, ticid, central_coord=source_list(p[0],catalog_main, ticid_main, tica=tica)
+    
     if trimmed_catalog is None:
         return
 
-    if mult_output:
-        aperture = []
-        background = []
-        for i in range(len(N_ap_list)):
-            aperture.append(SkyCircularAperture(trimmed_catalog, r=N_ap_list[i]*21*u.arcsec))
-        for j in range(len(N_bkg_list)):
-            background.append(SkyCircularAnnulus(trimmed_catalog, N_bkg_list[j][0]*21*u.arcsec,
-                                                 N_bkg_list[j][1]*21*u.arcsec))
+    if len(trimmed_catalog) == 0:
+        return
+
+    if len(trimmed_catalog) > max_sources:
+        trimmed_catalog_list = []
+        n_split = len(trimmed_catalog) // max_sources
+        for i in range( n_split ):
+            trimmed_catalog_list.append(trimmed_catalog[i*max_sources:(i+1)*max_sources])
+        if len(trimmed_catalog) % max_sources > 0:
+            trimmed_catalog_list.append( trimmed_catalog[n_split*max_sources:])
     else:
-        aperture = SkyCircularAperture(trimmed_catalog, r=N_ap*21 * u.arcsec)
-        background = SkyCircularAnnulus(trimmed_catalog,
-                                        N_in*21*u.arcsec,N_out*21*u.arcsec)    
-    n_iter = 0
-    failed_inds = []
-    for i, f in enumerate(p): 
-        # t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir) 
-        # ts.append(t)
-        # cadence_list.append(cn)
-        # LC.append(fluxes)
-        
-        try:
-            t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir)  
-            ts.append(t)
-            cadence_list.append(cn)
-            LC.append(fluxes)
-        except:
-            # pdb.set_trace()
-            print('Failed '+str(i))
-            failed_inds.append(i)
-
-        print(i)
-
-        # if n_iter // 10: # >> save intermediate products
-        #     np.save(out_dir+'ts'+suffix+'.npy', np.array(ts))
-        #     np.save(out_dir+'lc'+suffix+'.npy', np.array(LC).T)
-
-
-    print('Number failed: '+str(len(failed_inds)))
-    # -- save timeseries -------------------------------------------------------
-    ts=np.array(ts)
-    cadence_list = np.array(cadence_list)
-    orbit_list = np.array(orbit_list)
-    LC=np.array(LC)
-
-    inds = np.argsort(ts)
-    ts = ts[inds]
-    cadence_list = cadence_list[inds]
-
-    np.save(out_dir+'ts'+suffix+'.npy', ts)    
-    np.save(out_dir+'cn'+suffix+'.npy', cadence_list)
-   
-    if mult_output:
-        col = 0
-        for i in range(len(N_ap_list)):
-            for j in range(len(N_bkg_list)):
-                suffix1 = '-ap'+str(N_ap_list[i])+'-in'+str(N_bkg_list[j][0])+\
-                    '-out'+str(N_bkg_list[j][1])
-                LC_p = LC[:,col,:].T
-                LC_p = LC_p[:,inds]
-                np.save(out_dir+'lc'+suffix+suffix1+'.npy', LC_p)
-                col += 1
-    else:
-        LC=LC.T
-        LC = LC[:,inds]
-        np.save(out_dir+'lc'+suffix+'.npy', LC)
-
-    # >> save ticid
-    np.save(out_dir+'id'+suffix+'.npy', ticid)
+        trimmed_catalog_list = [trimmed_catalog]
     
-    # >> save coordinates
-    ra = []
-    dec = []
-    for i in range(len(trimmed_catalog)):
-        ra.append(trimmed_catalog[i].ra.degree)
-        dec.append(trimmed_catalog[i].dec.degree)
-    co = np.array([ra, dec]).T
-    np.save(out_dir+'co'+suffix+'.npy', co)        
+    for n, trimmed_catalog in enumerate(trimmed_catalog_list):
+        if mult_output:
+            aperture = []
+            background = []
+            for i in range(len(N_ap_list)):
+                aperture.append(SkyCircularAperture(trimmed_catalog, r=N_ap_list[i]*21*u.arcsec))
+            for j in range(len(N_bkg_list)):
+                background.append(SkyCircularAnnulus(trimmed_catalog, N_bkg_list[j][0]*21*u.arcsec,
+                                                     N_bkg_list[j][1]*21*u.arcsec))
+        else:
+            aperture = SkyCircularAperture(trimmed_catalog, r=N_ap*21 * u.arcsec)
+            background = SkyCircularAnnulus(trimmed_catalog,
+                                            N_in*21*u.arcsec,N_out*21*u.arcsec)    
+        n_iter = 0
+        failed_inds = []
+        for i, f in enumerate(p): 
+            # t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir) 
+            # ts.append(t)
+            # cadence_list.append(cn)
+            # LC.append(fluxes)
+
+            try:
+                t, cn, fluxes=process(f,aperture,background, central_coord, tica=tica, save_dir=save_dir)  
+                ts.append(t)
+                cadence_list.append(cn)
+                LC.append(fluxes)
+            except:
+                # pdb.set_trace()
+                print('Failed '+str(i))
+                failed_inds.append(i)
+
+            print(i)
+
+            # if n_iter // 10: # >> save intermediate products
+            #     np.save(out_dir+'ts'+suffix+'.npy', np.array(ts))
+            #     np.save(out_dir+'lc'+suffix+'.npy', np.array(LC).T)
+
+
+        print('Number failed: '+str(len(failed_inds)))
+        # -- save timeseries -------------------------------------------------------
+        ts=np.array(ts)
+        cadence_list = np.array(cadence_list)
+        orbit_list = np.array(orbit_list)
+        LC=np.array(LC)
+
+        inds = np.argsort(ts)
+        ts = ts[inds]
+        cadence_list = cadence_list[inds]
+
+        if len(trimmed_catalog_list) > 1:
+            np.save(out_dir+'ts'+suffix+'_'+str(n)+'.npy', ts)    
+            np.save(out_dir+'cn'+suffix+'_'+str(n)+'.npy', cadence_list)
+        else:            
+            np.save(out_dir+'ts'+suffix+'.npy', ts)    
+            np.save(out_dir+'cn'+suffix+'.npy', cadence_list)
+
+        if mult_output:
+            col = 0
+            for i in range(len(N_ap_list)):
+                for j in range(len(N_bkg_list)):
+                    suffix1 = '-ap'+str(N_ap_list[i])+'-in'+str(N_bkg_list[j][0])+\
+                        '-out'+str(N_bkg_list[j][1])
+                    LC_p = LC[:,col,:].T
+                    LC_p = LC_p[:,inds]
+                    if len(trimmed_catalog_list) > 1:
+                        np.save(out_dir+'lc'+suffix+suffix1+'_'+str(n)+'.npy', LC_p)
+                    else:
+                        np.save(out_dir+'lc'+suffix+suffix1+'.npy', LC_p)
+                    col += 1
+        else:
+            LC=LC.T
+            LC = LC[:,inds]
+            if len(trimmed_catalog_list)> 1:
+                np.save(out_dir+'lc'+suffix+'_'+str(n)+'.npy', LC)
+            else:
+                np.save(out_dir+'lc'+suffix+'.npy', LC)
+
+        # >> save ticid
+        if len(trimmed_catalog_list) > 1:
+            np.save(out_dir+'id'+suffix+'_'+str(n)+'.npy', ticid)
+        else:
+            np.save(out_dir+'id'+suffix+'.npy', ticid)
+
+        # >> save coordinates
+        ra = []
+        dec = []
+        for i in range(len(trimmed_catalog)):
+            ra.append(trimmed_catalog[i].ra.degree)
+            dec.append(trimmed_catalog[i].dec.degree)
+        co = np.array([ra, dec]).T
+        if len(trimmed_catalog_list) > 1:
+            np.save(out_dir+'co'+suffix+'_'+str(n)+'.npy', co)
+        else:
+            np.save(out_dir+'co'+suffix+'.npy', co)        
 
 # ------------------------------------------------------------------------------
 
-sector = 64
+sector = 56
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
@@ -583,7 +612,7 @@ if len(sys.argv) > 1:
     ccd = sys.argv[2]
 
 # -- RUN SETTINGS --------------------------------------------------------------
-    
+
 tica = False
 cam = 1
 
@@ -591,7 +620,7 @@ cam = 1
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
 #                   mult_output=mult_output, tica=tica)#, save_dir=plot_dir)
 
-for ccd in [2,3,4]: # !!
+for ccd in [1,2,3,4]: # !!
 
     if tica:
         download_ccd_tica(sect_dir, sector, cam, ccd)    
@@ -600,23 +629,23 @@ for ccd in [2,3,4]: # !!
         download_ccd(curl_file, data_dir, cam, ccd)
         check_download(data_dir, cam, ccd)    
 
-    wd_cat    = '/home/echickle/data/WDs.txt'
-    out_dir   = sect_dir+'s%04d-lc/'%sector
-    os.makedirs(out_dir, exist_ok=True)
-    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                     mult_output=mult_output, tica=tica)
-
-    wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
-    out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
-    os.makedirs(out_dir, exist_ok=True)
-    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-                     mult_output=mult_output, tica=tica)
-
-    # wd_cat    = '/home/echickle/data/Gaia_blue.csv'
-    # out_dir   = sect_dir+'s%04d-lc-gaia/'%sector
+    # wd_cat    = '/home/echickle/data/WDs.txt'
+    # out_dir   = sect_dir+'s%04d-lc/'%sector
     # os.makedirs(out_dir, exist_ok=True)
     # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
     #                  mult_output=mult_output, tica=tica)
+
+    # wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+    # out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+    # os.makedirs(out_dir, exist_ok=True)
+    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+    #                  mult_output=mult_output, tica=tica)
+
+    wd_cat    = '/home/echickle/data/Gaia_blue.csv'
+    out_dir   = sect_dir+'s%04d-lc-gaia/'%sector
+    os.makedirs(out_dir, exist_ok=True)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
     
     os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
 
