@@ -552,8 +552,11 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
         # if len(freqs) < 1e6:
         #     ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
         #     ax0_L.set_xlabel('Frequency [1/days]')
-        hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
+        try:
+            hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
                       rp_ext=rp_ext, ra=ra, dec=dec)
+        except:
+            print('HR Diagram failed :(')
 
         # >> threshold power (50% of peak)
         if freqs is not None:

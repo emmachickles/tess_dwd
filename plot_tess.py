@@ -9,8 +9,8 @@ bins=100
 ztf=True
 figsize=(5,2)
 
-ra_list = [121.1748862]
-dec_list = [-2.262534927]
+ra_list = [296.5212916666666]
+dec_list = [-29.829169444444446]
 per_list = [174.2054897/1440.]
 
 for ra, dec, per in zip(ra_list, dec_list, per_list):
