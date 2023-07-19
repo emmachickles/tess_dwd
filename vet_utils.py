@@ -4,10 +4,10 @@ import os
 def read_result_file(fname, bls=True):
     import pandas as pd
     if bls:
-        # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
+        # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0,  epo, rp, nt, dphi
         cat = pd.read_csv(fname, header=None, skiprows=1)    
-        ticid, ra, dec, power, snr, wid, per, nt, dphi = cat[0], cat[1], cat[2], cat[3], cat[4], cat[5], cat[6], cat[12], cat[13]
-        return ticid, ra, dec, power, snr, wid, per, nt, dphi
+        ticid, ra, dec, power, snr, wid, per, nt, dphi, dur = cat[0], cat[1], cat[2], cat[3], cat[4], cat[5], cat[6], cat[12], cat[13], cat[7]*cat[8]
+        return ticid, ra, dec, power, snr, wid, per, nt, dphi, dur
     else:
         # ticid, ra, dec, sig, wid, per, per_min, dphi
         cat = pd.read_csv(fname, header=None, skiprows=1)    
@@ -17,7 +17,7 @@ def read_result_file(fname, bls=True):
 
 def append_result_file(result_dir, sector_list, cam_list=[1,2,3,4], ccd_list=[1,2,3,4], bls=True):
     if bls:
-        result_list = [np.empty(0)]*9
+        result_list = [np.empty(0)]*10
     else:
         result_list = [np.empty(0)]*7
     for sector in sector_list:
@@ -97,7 +97,7 @@ def match_coord(ra_catalog, dec_catalog, per_catalog_true, result_list):
     return ra_catalog, dec_catalog, per_catalog_true, result_list
     
 
-def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_catalog_true, suffix='', gmag_catalog=None, y_max=2.):
+def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_catalog_true, suffix='', gmag_catalog=None, y_max=2., y_unit='day', bls=True):
     import matplotlib.pyplot as plt
     import pandas as pd
     import astropy.units as u
@@ -105,7 +105,10 @@ def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_c
     
     fig, ax = plt.subplots(figsize=(5,4))
     ax.set_xlabel('Gaia Gmag')
-    ax.set_ylabel('Period [days]')    
+    if y_unit=='day':
+        ax.set_ylabel('Period [days]')    
+    elif y_unit=='min':
+        ax.set_ylabel('Period [minutes]')        
     
     # Load Gaia white darf catalog
     wd_cat  = pd.read_csv(wd_tab, header=None, sep='\s+', dtype='str')
@@ -119,7 +122,13 @@ def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_c
     idx, d2d, _ = co.match_to_catalog_sky(co_wd)
     good_idx_all = np.nonzero(d2d.to(u.arcsec).value < 2)
     gmag_all = gmag_wd[idx[good_idx_all]]
-    per_all = result_list[:,6]
+    if bls:
+        per_all = np.copy(result_list[:,6])
+    else:
+        per_all = np.copy(result_list[:,5])
+    if y_unit=='min':
+        per_all *= 1440.
+       
     ax.plot(gmag_all, per_all[good_idx_all], '.k', ms=1, alpha=0.5)
     
     if gmag_catalog is None:
@@ -130,13 +139,25 @@ def plot_gmag(out_dir, wd_tab, result_list, result_catalog, match_catalog, per_c
         gmag_catalog = gmag_wd[idx[good_idx]]
     
     if np.count_nonzero(match_catalog) > 0:
-        per_catalog = result_catalog[:,6]
+        if bls:
+            per_catalog = result_catalog[:,6]
+        else:
+            per_catalog = result_catalog[:,5]
+
+        if y_unit=='min':
+            per_catalog_true *= 1440.
+            per_catalog *= 1440.
+
         ax.plot(gmag_catalog[~match_catalog], per_catalog_true[~match_catalog], 'Xr', label=suffix+'-unrecovered\nTrue period')
         ax.plot(gmag_catalog[~match_catalog], per_catalog[~match_catalog], 'Xm', label=suffix+'-unrecovered\nBLS period')
         ax.plot(gmag_catalog[match_catalog], per_catalog[match_catalog], '>g', label=suffix+'-recovered')        
+
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_dir+'gmag_per_'+suffix+'.png', dpi=300)
+
+    if y_unit=='min':
+        y_max *= 1440.
     ax.set_ylim([0, y_max])
     fig.tight_layout()
     fig.savefig(out_dir+'gmag_per_'+suffix+'_zoom.png', dpi=300)

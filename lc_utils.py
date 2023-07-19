@@ -153,7 +153,7 @@ def load_ztf_lc(fnames, n_std=7, clip=True):
 
     return t, y, dy
 
-def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True, ztf=False):
+def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True, ztf=False, uzay=False):
     if ticid is None:
         from astroquery.mast import Catalogs
         catalog_data = Catalogs.query_region(f"{ra} {dec}", catalog="TIC", radius=0.001, objectname=False)
@@ -167,7 +167,10 @@ def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True, ztf=Fa
                 if ztf:
                     fname = data_dir+'s%04d/s%04d-lc-ZTF/id-%d-%d.npy'%(sector, sector, cam, ccd)
                 else:
-                    fname = data_dir+'s%04d/s%04d-lc/id-%d-%d.npy'%(sector, sector, cam, ccd)
+                    if uzay:
+                        fname = data_dir+'s%04d-lc/id-%d-%d.npy'%(sector, cam, ccd)
+                    else:
+                        fname = data_dir+'s%04d/s%04d-lc/id-%d-%d.npy'%(sector, sector, cam, ccd)
                 if os.path.exists(fname):
                     co = np.int64(np.load(fname))
                     if len(np.where(co == ticid)[0]) > 0:

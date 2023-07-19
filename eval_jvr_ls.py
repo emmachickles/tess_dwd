@@ -58,7 +58,7 @@ print('DWD Recovery: '+str(np.count_nonzero(match_ztf))+' / '+str(len(match_ztf)
 
 gmag_ztf = get_gmag(result_ztf, data_dir)
 plot_gmag(out_dir, wd_tab, result_list, result_ztf, match_ztf, period_ztf_true,
-          gmag_catalog=gmag_ztf, suffix='JVR', y_max=0.015)
+          gmag_catalog=gmag_ztf, suffix='JVR', y_max=0.2, y_unit='min', bls=False)
 
 # -- catalogs -----------------------------------------------------------------
 
@@ -94,8 +94,8 @@ print('Recovered DWDs: '+','.join(ticid_dwd[match_dwd].astype('str')))
 
 # -- Gmag plots ---------------------------------------------------------------
 
-plot_gmag(out_dir, wd_tab, result_list, result_ucb, match_ucb, period_ucb_true, suffix='UCB')
-plot_gmag(out_dir, wd_tab, result_list, result_dwd, match_dwd, period_dwd_true, suffix='DWD')
+plot_gmag(out_dir, wd_tab, result_list, result_ucb, match_ucb, period_ucb_true, suffix='UCB', bls=False)
+plot_gmag(out_dir, wd_tab, result_list, result_dwd, match_dwd, period_dwd_true, suffix='DWD', bls=False)
 
 # -- save figures --------------------------------------------------------------
 
