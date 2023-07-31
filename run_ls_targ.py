@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 from Period_Finding import LS_Astropy
+from astropy.timeseries import LombScargle
 
 out_dir = "/home/echickle/out/vet/"
 tess_dir = "/home/echickle/data/"
@@ -10,8 +11,8 @@ bins=100
 ztf=False
 figsize=(5,2)
 
-ra_list = [231.90983052211]
-dec_list = [-45.03539067453]
+ra_list = [231.90982999716]
+dec_list = [-45.03539080131]
 per_list = [745.877 / (1440*60.)]
 
 for ra, dec, per in zip(ra_list, dec_list, per_list):
@@ -43,19 +44,26 @@ for ra, dec, per in zip(ra_list, dec_list, per_list):
     fig00.savefig(out_dir+suffix+'_binned_TESS.png', dpi=300)
     print('Saved '+out_dir+suffix+'_binned_TESS.png')
 
-    dy = np.ones(y.shape)
-    _, _, _, per_tess, ls_power_best, freqs, power = \
-        LS_Astropy(t,y,dy,pmax=10)
+    freqs, power = LombScargle(t, y).autopower(samples_per_peak=10)
+    power = (power - np.mean(power)) / np.std(power)
+    
     plt.figure(figsize=figsize)
-    periods = [745.87715, 704.24127, 702.89501, 701.75412,  649.39711]
+    # periods = [745.87715, 704.24127, 702.89501, 701.75412,  649.39711]
+    # periods = [702.89501, 351.46205]
+    # labels = ['702.89501 s', '702.89501/2 s']
+    periods = [701.8933, 436.9813,  352.938,  233.264]
     colors=['b', 'm', 'r', 'g', 'c']
     for i in range(len(periods)):
+        # plt.axvline((1440*60.)/periods[i], c=colors[i], ls='--', lw=1, label=labels[i])
         plt.axvline((1440*60.)/periods[i], c=colors[i], ls='--', lw=1, label=str(periods[i])+' s')
-    plt.plot(freqs, power, '.k', ms=1)
-    plt.xlim([100, 150])
+        
+    plt.plot(freqs, power, '-k', lw=1)
+    # plt.plot(freqs, power, '.k', ms=1)
+
+    plt.xlim([100,400])
     plt.xlabel('Frequency [1/days]')
-    plt.ylabel('LS Power')
-    plt.legend()
+    plt.ylabel('LS Power\nstd above mean')
+    plt.legend(loc='upper center')
     plt.tight_layout()
     plt.savefig(out_dir+suffix+'_LS_Periodogram.png',dpi=300)
     print('Saved '+out_dir+suffix+'_LS_Periodogram.png')
