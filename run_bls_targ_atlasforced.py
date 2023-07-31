@@ -6,45 +6,57 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 pos_iqr = 3
-neg_iqr = 20
+neg_iqr = 10
 skiprows = 1
 objid_type = None
 
 qmin = 0.01
 qmax = 0.15
+pmin = 2 # minutes
+pmax = 10 # days 
+dlogq = 0.1
 
 bins=100
 
-output_dir = "/home/echickle/out/DWD_pc/"
+output_dir = "/home/echickle/out/KBtargets/"
 os.makedirs(output_dir, exist_ok=True)
-data_dir = "/home/echickle/data/atlasforcedphotometryresults_DWD/"
+data_dir = "/home/echickle/data/atlasforcedphotometryresults_KBtargets/"
 wd_main = "/home/echickle/data/GaiaEDR3_WD_main.fits"
 rp_ext = "/home/echickle/data/GaiaEDR3_WD_RPM_ext.fits"
 
 # period = [0.0800126, 0.09986, 0.11601549, 0.2350606, 0.246137]
-period = [0.11601549, 0.0800126, 0.2350606, 0.09986, 0.246137]
+# period = [0.11601549, 0.0800126, 0.2350606, 0.09986, 0.246137]
+period = [None]
 
 fnames = os.listdir(data_dir)
 for i in range(len(fnames)):
     f = fnames[i]
 
     t, y, dy, ra, dec = lcu.load_atlas_lc(data_dir+f, pos_iqr=pos_iqr, neg_iqr=neg_iqr,
-                                          skiprows=skiprows, clip=False)
+                                          skiprows=skiprows)
 
     print(ra)
     print(dec)
     gaiaid = f.split('/')[-1]
     suffix = '_GID_'+gaiaid+'_ra_{}_dec_{}_'.format(ra, dec)    
 
-    # t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
-    #     BLS(t,y,dy,pmin=2,pmax=10,qmin=qmin,qmax=qmax,remove=False)
-    # res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=output_dir,
-    #                    objid=gaiaid, objid_type=objid_type, ra=ra, dec=dec,
-    #              dy=dy, suffix=suffix, wd_main=wd_main, rp_ext=rp_ext)
-    # # per, q, epo = res[3], res[5], res[7]
+    freqs_to_remove = []
+    df = 0.05
+    freqs_to_remove.append([1 - df, 1 + df])
+    freqs_to_remove.append([1/2. - df, 1/2. + df])
+    freqs_to_remove.append([1/4. - df, 1/4. + df])    
+    y, dy = lcu.normalize_lc(y, dy)
+    t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
+        BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,dlogq=dlogq,
+            freqs_to_remove=freqs_to_remove)    
+    res = lcu.vet_plot(t, y, freqs, power, q, phi0, output_dir=output_dir,
+                       objid=gaiaid, objid_type=objid_type, ra=ra, dec=dec,
+                 dy=dy, suffix=suffix, wd_main=wd_main, rp_ext=rp_ext)
+    # per, q, epo = res[3], res[5], res[7]
     # lcu.plot_eclipse_timing(t, y, per, epo, q, output_dir+'GAIAID_{}_{}_{}_'.format(gid, ra, dec))
 
-    per = period[i]
+    # per = period[i]
+    per=period
     y, dy = lcu.normalize_lc(y, dy)
 
     fig, ax = plt.subplots()
