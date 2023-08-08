@@ -18,9 +18,9 @@ dlogq = 0.1
 
 bins=100
 
-output_dir = "/home/echickle/out/KBtargets/"
+output_dir = "/home/echickle/out/"
 os.makedirs(output_dir, exist_ok=True)
-data_dir = "/home/echickle/data/atlasforcedphotometryresults_KBtargets/"
+data_dir = "/home/echickle/data/"
 wd_main = "/home/echickle/data/GaiaEDR3_WD_main.fits"
 rp_ext = "/home/echickle/data/GaiaEDR3_WD_RPM_ext.fits"
 
@@ -28,7 +28,8 @@ rp_ext = "/home/echickle/data/GaiaEDR3_WD_RPM_ext.fits"
 # period = [0.11601549, 0.0800126, 0.2350606, 0.09986, 0.246137]
 period = [None]
 
-fnames = os.listdir(data_dir)
+# fnames = os.listdir(data_dir)
+fnames = ['job633615.txt']
 for i in range(len(fnames)):
     f = fnames[i]
 
@@ -45,7 +46,7 @@ for i in range(len(fnames)):
     freqs_to_remove.append([1 - df, 1 + df])
     freqs_to_remove.append([1/2. - df, 1/2. + df])
     freqs_to_remove.append([1/4. - df, 1/4. + df])    
-    y, dy = lcu.normalize_lc(y, dy)
+    # y, dy = lcu.normalize_lc(y, dy)
     t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
         BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,dlogq=dlogq,
             freqs_to_remove=freqs_to_remove)    
@@ -57,11 +58,10 @@ for i in range(len(fnames)):
 
     # per = period[i]
     per=period
-    y, dy = lcu.normalize_lc(y, dy)
+    # y, dy = lcu.normalize_lc(y, dy)
 
     fig, ax = plt.subplots()
-    folded_t, folded_y, folded_dy = lcu.bin_timeseries(t%per, y, bins, dy=dy)
-    lcu.plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=per)
+    lcu.plot_phase_curve(ax, t%per, y, dy, period=per)
     
     # w = int(0.1*len(y))
     # tconv = np.convolve(t%per, np.ones(w), 'valid') / w
@@ -79,4 +79,10 @@ for i in range(len(fnames)):
     # ax.set_ylabel('Relative flux')
     
     fig.savefig(output_dir + 'ra_{}_dec_{}_phase_curve.png'.format(ra, dec))
-    
+    print('Saved '+output_dir + 'ra_{}_dec_{}_phase_curve.png'.format(ra, dec))
+
+    fig, ax = plt.subplots()    
+    folded_t, folded_y, folded_dy = lcu.bin_timeseries(t%per, y, bins, dy=dy)
+    lcu.plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=per)
+    fig.savefig(output_dir + 'ra_{}_dec_{}_binned_phase_curve.png'.format(ra, dec))
+    print('Saved '+output_dir + 'ra_{}_dec_{}_binned_phase_curve.png'.format(ra, dec))    
