@@ -8,10 +8,11 @@ pmax = 10
 qmin = 0.01
 qmax = 0.15
 
-output_dir = "/scratch/echickle/s0056-WD/"
-ticid = [1717393922]
-sector = [56]
-cam = [3]
+output_dir = "/scratch/echickle/out/"
+# output_dir = '/home/echickle/out/'
+ticid = [741451769]
+sector = [60]
+cam = [1]
 ccd = [4]
 
 # output_dir = "/scratch/echickle/BLS_Test_Nonastro/"
