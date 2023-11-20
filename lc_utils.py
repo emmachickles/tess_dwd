@@ -10,7 +10,7 @@ def load_atlas_lc(f, pos_iqr=3, neg_iqr=10, n_std=2, clip=True, skiprows=0):
     Filter=np.loadtxt(f,usecols=(5),skiprows=skiprows,dtype=str) 
 
     # >> filter by limiting magnitude
-    ZP=data[:,3] # >> zeropoint magnitude 
+    ZP=data[:,3] # >> zeropoint magnitude
     Filter=Filter[ZP>17.5]
     data=data[ZP>17.5]
     t, y, dy = data[:,0], data[:,1], data[:,2]
@@ -115,8 +115,9 @@ def get_ztf_lc(ra, dec):
 
     return fnames
 
-def load_ztf_lc(fnames, n_std=7, clip=True):
+def load_ztf_lc(fnames, n_std=7, clip=True, pos_iqr=3,neg_iqr=3, return_filters=False):
     t, y, dy = [], [], []
+    filters = []
 
     for i in range(len(fnames)):
         f = fnames[i]
@@ -128,14 +129,35 @@ def load_ztf_lc(fnames, n_std=7, clip=True):
         med = np.median(data[:,1])
         t.extend(data[:,0])
         y.extend(data[:,1] - np.median(data[:,1]))
-        dy.extend(data[:,2])    
+        dy.extend(data[:,2])
+
+        filters.extend([f[-4]]*len(data))
 
     t, y, dy = np.array(t), np.array(y) + med, np.array(dy)
 
     if clip:
-        std = np.std(y)
-        inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
-        t, y, dy = t[inds], y[inds], dy[inds]  
+        # std = np.std(y)
+        # inds = np.nonzero( (y > med - n_std*std) * (y < med + n_std*std) )
+        # t, y, dy = t[inds], y[inds], dy[inds]
+
+        q3, q1 = np.percentile(y, [75 ,25])
+        iqr=(q3-q1)/2
+
+        good_idx=(y-np.median(y))<pos_iqr*iqr # !! 3 
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
+
+        good_idx=(np.median(y)-y)<neg_iqr*iqr
+        t=t[good_idx]
+        dy=dy[good_idx]
+        y=y[good_idx]
+
+        good_idx=dy>0
+        t=t[good_idx]
+        y=y[good_idx]
+        dy=dy[good_idx]  
+        
 
     # if clip:
     #     q3, q1 = np.percentile(y, [75 ,25])
@@ -151,7 +173,10 @@ def load_ztf_lc(fnames, n_std=7, clip=True):
     #     dy=dy[good_idx]
     #     y=y[good_idx]
 
-    return t, y, dy
+    if return_filters:
+        return t,y,dy,filters
+    else:
+        return t, y, dy
 
 def get_tess_lc(data_dir, ticid=None, ra=None, dec=None, first_only=True, ztf=False, uzay=False):
     if ticid is None:
@@ -442,8 +467,8 @@ def calc_sine_fit(t, y, period):
     err = np.mean( ( fitfunc - y ) ** 2)
     return err, fitfunc
     
-def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_dir=None, suffix='',
-             objid=None, objid_type='TICID', bins=100, bls=True, save_npy=False, nearpeak=3000,
+def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_dir='./', suffix='',
+             objid=None, objid_type=None, bins=100, bls=True, save_npy=False, nearpeak=3000,
              ra=None, dec=None, sig=None, wid=None, period=None,
              wd_tab='WDs.txt', wd_main='GaiaEDR3_WD_main.fits', rp_ext='GaiaEDR3_WD_RPM_ext.fits',
              snr_threshold=0, pow_threshold=0, per_threshold=14400, wid_threshold=0):
@@ -555,6 +580,7 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
         # if len(freqs) < 1e6:
         #     ax0_L.plot(freqs, power, '.k', ms=1, alpha=0.5, rasterized=True)
         #     ax0_L.set_xlabel('Frequency [1/days]')
+        
         try:
             hr_diagram_wd(objid, objid_type, ax0_L, wd_tab=wd_tab, wd_main=wd_main,
                       rp_ext=rp_ext, ra=ra, dec=dec)
@@ -705,16 +731,34 @@ def vet_plot(t, y, freqs=None, power=None, q=None, phi0=None, dy=None, output_di
 
     
 def plot_phase_curve(ax, folded_t, folded_y, folded_dy, period=None,
-                     ylabel="Relative Flux", alpha=1.):
-    shift = np.max(folded_t) - np.min(folded_t)    
-    ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt=".k", ms=2,
-                elinewidth=1, capsize=1., alpha=alpha)
-    ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt=".k", ms=2,
-                elinewidth=1, capsize=1., alpha=alpha)
-    if period is not None:
+                     ylabel="Relative Flux", alpha=1., err_sigma=None,
+                     plot_phase=False, plot_per=False, elinewidth=0.5):
+
+    if err_sigma is not None:
+        # >> sigma clip errors
+        std = np.std(folded_dy)
+        inds = np.nonzero(folded_dy < err_sigma*std)
+        folded_t, folded_y, folded_dy = folded_t[inds], folded_y[inds], folded_dy[inds]
+    
+    shift = np.max(folded_t) - np.min(folded_t)
+
+    if plot_phase:
+        ax.set_xlabel("Time [minutes]")    
+        ax.errorbar(folded_t%period, folded_y, yerr=folded_dy, fmt=".k", ms=2,
+                    elinewidth=elinewidth, capsize=elinewidth, alpha=alpha)
+        ax.errorbar((folded_t+shift)%period, folded_y, yerr=folded_dy, fmt=".k", ms=2,
+                    elinewidth=elinewidth, capsize=elinewidth, alpha=alpha)
+    else:
+        ax.set_xlabel("Time [minutes]")    
+        ax.errorbar(folded_t*1440, folded_y, yerr=folded_dy, fmt=".k", ms=2,
+                    elinewidth=elinewidth, capsize=elinewidth, alpha=alpha)
+        ax.errorbar((folded_t+shift)*1440, folded_y, yerr=folded_dy, fmt=".k", ms=2,
+                    elinewidth=elinewidth, capsize=elinewidth, alpha=alpha)
+        
+    
+    if period is not None and plot_per:
         ax.text(0.95, 0.05, str(np.round(period*1440,5))+" min",
                 horizontalalignment="right", transform=ax.transAxes)                    
-    ax.set_xlabel("Time [minutes]")
     if ylabel is not None:
         ax.set_ylabel(ylabel)
 
@@ -925,6 +969,7 @@ def hr_diagram_wd(objid, objid_type, ax, wd_tab='WDs.txt', wd_main='/data/GaiaED
     # ax.xticklabels([])
     # ax.yticklabels([])
     # ax.xaxis.tick_top()
+
     
     
 def hr_diagram(gaia_tab, ra, dec, ax):
@@ -1049,7 +1094,8 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
                     ra,dec,gaia_tab,wd_tab,wd_main,rp_ext,out_dir,suffix,per=None,
                     per_tess=None,per_atlas=None,per_ztf=None,
                     bins=100,n_std=5,wind=0.1,qmin=0.01,clip=True,
-                    qmax=0.15,bls=False, figsize=(5,2)):
+                    qmax=0.15,bls=False, figsize=(5,2),
+                    pos_iqr=3,neg_iqr=6):
 
     import pandas as pd
     import os
@@ -1074,7 +1120,13 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     # -- atlas phase curve ------------------------------------------------------
 
     if type(fname_atlas) == type(""):
-        t, y, dy, _, _ = load_atlas_lc(fname_atlas, clip=clip)
+        t, y, dy, _, _ = load_atlas_lc(fname_atlas, clip=clip, pos_iqr=pos_iqr,
+                                       neg_iqr=neg_iqr)
+        # !!
+        if np.min(y) < 0:
+            y += np.abs(np.min(y))*1.5
+        
+        y, dy = normalize_lc(y, dy)
         if per_atlas is None: # -- atlas period finding ------------------------
             freqs_to_remove = []
             df = 0.05
@@ -1098,8 +1150,11 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
                      objid_type=None, dy=dy, suffix='_'+suffix, wd_main=wd_main,
                      rp_ext=rp_ext, wd_tab=wd_tab, ra=ra, dec=dec, bls=bls)
 
-            ax5.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-            ax5.set_xlabel('Period [minutes]')
+            ax5.plot(freqs, power, '.k', ms=1, alpha=0.5)
+            ax5.set_xlabel('Frequency [1/days]')
+
+            # ax5.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+            # ax5.set_xlabel('Period [minutes]')
 
             if per is None:
                 per = per_atlas            
@@ -1117,7 +1172,7 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
             else:
                 ax5.set_ylabel('ATLAS LS Power') 
                 ax8.set_ylabel('ATLAS LS Power')
-
+                
         folded_t, folded_y, folded_dy = bin_timeseries(t%per_atlas, y, bins, dy=dy)
         plot_phase_curve(ax1, folded_t, folded_y, folded_dy, period=per_atlas,
                          ylabel="ATLAS Relative Flux")
@@ -1156,7 +1211,8 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
         ind = np.nonzero(ticid_list == ticid)[0][0]
         y = np.load(tess_dir+'lc'+f_suffix)[ind]
         t, y, flag = prep_lc(t, y, n_std=n_std, wind=wind)
-    
+        y, _ = normalize_lc(y)
+            
         if per_tess is None: # -- tess period finding ------------------------------
             dy = np.ones(y.shape) * 0.1
 
@@ -1188,9 +1244,12 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
                      objid=ticid, suffix='_'+suffix, wd_main=wd_main, rp_ext=rp_ext,
                      wd_tab=wd_tab, bls=bls)
 
-            ax4.plot(1440/freqs, power, '.k', ms=1, alpha=0.2)
-            ax4.set_xlabel('Period [minutes]')
+            ax4.plot(freqs, power, '.k', ms=1, alpha=0.2)
+            ax4.set_xlabel('Frequency [1/days]')
 
+            # ax4.plot(1440/freqs, power, '.k', ms=1, alpha=0.2)
+            # ax4.set_xlabel('Period [minutes]')            
+            
             centr = np.argmin(np.abs(freqs - 1/per))
             ax7.axvline(x=1/per, color='r', linestyle='dashed')
             # ax7.plot(freqs[max(0,centr-3000):centr+3000],
@@ -1240,7 +1299,13 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     # -- ztf phase curve -------------------------------------------------------
 
     if len(fnames_ztf) > 0:
-        t, y, dy = load_ztf_lc(fnames_ztf, clip=clip)
+        t, y, dy = load_ztf_lc(fnames_ztf, clip=clip, pos_iqr=pos_iqr, neg_iqr=neg_iqr)
+        # !!
+        if np.min(y) < 0:
+            y += np.abs(np.min(y))*1.5
+        
+        y, dy = normalize_lc(y, dy)
+
         if per_ztf is None: # -- ztf period finding ----------------------------
             freqs_to_remove = []
             df = 0.05
@@ -1262,8 +1327,11 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
                      objid_type=None, ra=ra,dec=dec, dy=dy, suffix='_'+suffix,
                      wd_main=wd_main, rp_ext=rp_ext, wd_tab=wd_tab, bls=bls)
 
-            ax6.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
-            ax6.set_xlabel('Period [minutes]')
+            ax6.plot(freqs, power, '.k', ms=1, alpha=0.5)
+            ax6.set_xlabel('Frequency [1/days]')
+            
+            # ax6.plot(1440/freqs, power, '.k', ms=1, alpha=0.5)
+            # ax6.set_xlabel('Period [minutes]')
 
             if per is None:
                 per=per_ztf
@@ -1314,5 +1382,8 @@ def make_panel_plot(fname_atlas,fnames_ztf,tess_dir,ticid,cam,ccd,
     fig.tight_layout()
     fig.savefig(out_dir+suffix+'_panel.png', dpi=300)
     print('Saved '+out_dir+suffix+'_panel.png')
+
+    pdb.set_trace()
     plt.close()
 
+    

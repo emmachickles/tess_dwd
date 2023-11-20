@@ -12,7 +12,8 @@ objid_type = None
 
 qmin = 0.01
 qmax = 0.15
-pmin = 2 # minutes
+# pmin = 2 # minutes
+pmin=1440
 pmax = 10 # days 
 dlogq = 0.1
 
@@ -29,7 +30,7 @@ rp_ext = "/home/echickle/data/GaiaEDR3_WD_RPM_ext.fits"
 period = [None]
 
 # fnames = os.listdir(data_dir)
-fnames = ['job633615.txt']
+fnames = ['job747258.txt']
 for i in range(len(fnames)):
     f = fnames[i]
 
@@ -58,6 +59,7 @@ for i in range(len(fnames)):
 
     # per = period[i]
     per=period
+    per=8.539
     # y, dy = lcu.normalize_lc(y, dy)
 
     fig, ax = plt.subplots()

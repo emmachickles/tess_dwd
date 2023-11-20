@@ -27,8 +27,10 @@ os.makedirs(out_dir, exist_ok=True)
 # ------------------------------------------------------------------------------
 
 # load data
-ra_list = [349.68735676108, 231.61248650513]
-dec_list = [47.68763795998, -41.92232392689]
+ra_list = [36.4925618171062]
+dec_list = [-69.3403824243844]
+ra_list = [311.143166894]
+dec_list = [-78.7005123396]
 per_list = [None]*len(ra_list)
 
 for ra, dec, per in zip(ra_list, dec_list, per_list):
@@ -36,6 +38,9 @@ for ra, dec, per in zip(ra_list, dec_list, per_list):
 
     ticid, sector, cam, ccd = lcu.get_tess_lc(tess_dir, ra=ra, dec=dec)
     print('TIC '+str(ticid))
+    print('sector '+str(sector))
+    # sector,cam,ccd=56,4,4
+
     if ticid is None:
         sector_dir = None
     else:

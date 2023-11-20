@@ -8,12 +8,17 @@ pmax = 10
 qmin = 0.01
 qmax = 0.15
 
-output_dir = "/scratch/echickle/out/"
-# output_dir = '/home/echickle/out/'
+# output_dir = "/scratch/echickle/out/"
+output_dir = '/home/echickle/out/'
 ticid = [741451769]
-sector = [60]
+sector = [57]
 cam = [1]
 ccd = [4]
+ticid = [1987822499]
+sector = [67]
+cam = [3]
+ccd = [2]
+
 
 # output_dir = "/scratch/echickle/BLS_Test_Nonastro/"
 # ticid  = [836153158, 830748654, 778219027, 154178878, 803454388, 803568171]
@@ -80,6 +85,12 @@ wd_main = "/scratch/echickle/GaiaEDR3_WD_main.fits"
 rp_ext = "/scratch/echickle/GaiaEDR3_WD_RPM_ext.fits"
 qflag_dir = "/scratch/echickle/QLPqflags/"
 
+wd_tab= "/home/echickle/data/WDs.txt"
+wd_main = "/data/GaiaEDR3_WD_main.fits"
+rp_ext = "/data/GaiaEDR3_WD_RPM_ext.fits"
+qflag_dir = "/home/echickle/data/QLPqflags/"
+
+
 # ------------------------------------------------------------------------------
 
 result = []
@@ -87,7 +98,8 @@ result = []
 for i in range(len(ticid)):
     print(ticid[i])
 
-    data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector[i]
+    # data_dir = "/scratch/data/tess/lcur/ffi/s%04d-lc/"%sector[i]
+    data_dir = '/home/echickle/data/s%04d/'%sector[i]+'s%04d-lc/'%sector[i]
 
     suffix = '-'+str(cam[i])+'-'+str(ccd[i])+'.npy'
 
@@ -127,7 +139,8 @@ for i in range(len(ticid)):
     freqs_to_remove.append([86400/(200*4) - df, 86400/(200*4) + df])
     freqs_to_remove.append([86400/(200*5) - df, 86400/(200*5) + df])     
     freqs_to_remove.append([86400/(200*6) - df, 86400/(200*6) + df]) 
-    freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])   
+    freqs_to_remove.append([86400/(200*7) - df, 86400/(200*7) + df])
+    freqs_to_remove = [] # !
     
     t, y, dy, period, bls_power_best, freqs, power, q, phi0 = \
         BLS(t,y,dy,pmin=pmin,pmax=pmax,qmin=qmin,qmax=qmax,freqs_to_remove=freqs_to_remove)
@@ -143,6 +156,20 @@ for i in range(len(ticid)):
 
     res = [ticid[i], coord[0], coord[1]] + list(res)
     result.append(res)
+
+    from astropy.timeseries import LombScargle
+    # freqLS, powLS = LombScargle(t,y).autopower()
+    freqLS=freqs
+    perLS=1/freqLS
+    powLS=LombScargle(t,y).power(freqLS)
+    plt.figure(figsize=(8,6))
+    plt.xlabel('Period [day]')
+    plt.ylabel('LS Power')
+    plt.plot(1/freqLS, powLS, '.k', ms=1)
+    np.savetxt(output_dir+'TIC'+str(ticid[i])+'_LS.txt',np.array([1/freqLS,powLS]))
+    plt.savefig(output_dir+'TIC'+str(ticid[i])+'_LS_periodogram.png')
+    print(output_dir+'TIC'+str(ticid[i])+'_LS_periodogram.png')
+    
 
 # ticid, ra, dec, sig, snr, wid, period, period_min, q, phi0, dur, epo, rp, nt, dphi
 np.savetxt(output_dir+'GPU.result', np.array(result),

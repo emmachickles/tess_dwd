@@ -62,9 +62,14 @@ def BLS(t,y,dy,pmin=3,pmax=True,qmin=2e-2,qmax=0.12,dlogq=0.1,freqs_to_remove=No
         nf = int(np.ceil((fmax - fmin) / df))
         freqs = fmin + df * np.arange(nf)
 
+        import time
+        start_time = time.time()
         bls_power = bls.eebls_gpu_fast(t, y, dy, freqs,
                                        **search_params)
-
+        elapsed_time = time.time() - start_time
+        print(elapsed_time)
+        
+        
         if freqs_to_remove is not None:
 
                 for pair in freqs_to_remove:

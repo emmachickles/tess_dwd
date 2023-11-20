@@ -458,7 +458,7 @@ def process(f,sky_aperture,background,central_coord, tica=True, save_dir=None):
 
 
 def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
-            suffix='', tica=False, save_dir=None, max_sources=15000):
+            suffix='', tica=False, save_dir=None, max_sources=30000):
     suffix = '-'+str(cam)+'-'+str(ccd)+suffix
     
     LC=[]
@@ -581,7 +581,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 56
+sector = 71
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
@@ -613,8 +613,8 @@ if len(sys.argv) > 1:
 
 # -- RUN SETTINGS --------------------------------------------------------------
 
-tica = False
-cam = 1
+tica = True
+cam = 2
 
 # ccd = 2
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
@@ -629,23 +629,23 @@ for ccd in [1,2,3,4]: # !!
         download_ccd(curl_file, data_dir, cam, ccd)
         check_download(data_dir, cam, ccd)    
 
-    # wd_cat    = '/home/echickle/data/WDs.txt'
-    # out_dir   = sect_dir+'s%04d-lc/'%sector
-    # os.makedirs(out_dir, exist_ok=True)
-    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-    #                  mult_output=mult_output, tica=tica)
-
-    # wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
-    # out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
-    # os.makedirs(out_dir, exist_ok=True)
-    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
-    #                  mult_output=mult_output, tica=tica)
-
-    wd_cat    = '/home/echickle/data/Gaia_blue.csv'
-    out_dir   = sect_dir+'s%04d-lc-gaia/'%sector
+    wd_cat    = '/home/echickle/data/WDs.txt'
+    out_dir   = sect_dir+'s%04d-lc/'%sector
     os.makedirs(out_dir, exist_ok=True)
     run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
                      mult_output=mult_output, tica=tica)
+
+    wd_cat    = '/home/echickle/data/ZTF_Eclipses.txt'
+    out_dir   = sect_dir+'s%04d-lc-ZTF/'%sector
+    os.makedirs(out_dir, exist_ok=True)
+    run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+                     mult_output=mult_output, tica=tica)
+
+    # wd_cat    = '/home/echickle/data/Gaia_blue.csv'
+    # out_dir   = sect_dir+'s%04d-lc-gaia/'%sector
+    # os.makedirs(out_dir, exist_ok=True)
+    # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
+    #                  mult_output=mult_output, tica=tica)
     
     os.system('rm -r '+data_dir+'cam{}-ccd{}'.format(cam,ccd))
 
