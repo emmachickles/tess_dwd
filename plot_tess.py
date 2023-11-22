@@ -1,23 +1,46 @@
-from lc_utils import get_tess_lc, normalize_lc, bin_timeseries, plot_phase_curve, prep_lc
+from lc_utils import get_tess_lc, normalize_lc, bin_timeseries, plot_phase_curve, prep_lc, rm_qflag
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
 
 out_dir = "/home/echickle/out/vet/"
 tess_dir = "/home/echickle/data/"
-bins=100
-ztf=True
+qflag_dir = "/home/echickle/data/QLPqflags/"
+
+bins=150
+ztf=False
+n_std=10
 figsize=(5,2)
 
-ra_list = [231.90982999716]
-dec_list = [-45.03539080131]
-per_list = [174.2054897/1440.]
+# >> 60 minute eclipsers
+ra_list = [215.68014, 167.49633, 158.683, 123.67249]
+dec_list = [-44.07947, -40.0399, -57.698669, -64.44789]
+per_list = [0.04719063, 0.04393835, 0.04360338, 0.04412959]
+
+ra_list = [285.3559028]
+dec_list = [53.1581301]
+per_list = [0.0281957]
+
+bkg = 'w'
+c= 'k'
+if bkg == 'k':
+    import matplotlib as mpl
+    plt.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['text.color'] = 'white'
+    mpl.rcParams['axes.labelcolor'] = 'white'
+    mpl.rcParams['xtick.color'] = 'white'
+    mpl.rcParams['ytick.color'] = 'white'
+    mpl.rcParams['axes.edgecolor'] = 'white'
+    
 
 for ra, dec, per in zip(ra_list, dec_list, per_list):
     # ra, dec = 121.174886, -2.262535
     suffix='ra_{}_dec_{}'.format(ra,dec)
     ticid, sector, cam, ccd = get_tess_lc(tess_dir, ra=ra, dec=dec, ztf=ztf)
-
+    # ticid = 938779482
+    # sector = 64
+    # cam = 2
+    # ccd = 1
     if ztf:
         ccd_dir = tess_dir+'s00{}/s00{}-lc-ZTF/'.format(sector, sector)
     else:
@@ -25,22 +48,58 @@ for ra, dec, per in zip(ra_list, dec_list, per_list):
         
     f_suffix = '-{}-{}.npy'.format(cam, ccd)        
     t = np.load(ccd_dir+'ts'+f_suffix)
+    cn = np.load(ccd_dir+'cn'+f_suffix)    
     ticid_list = np.load(ccd_dir+'id'+f_suffix)
     ticid, ticid_list = np.int64(ticid), np.int64(ticid_list)
     ind = np.nonzero(ticid_list == ticid)[0][0]
     y = np.load(ccd_dir+'lc'+f_suffix)[ind]
-    t, y, flag = prep_lc(t, y)
+
+    fig00, ax00=plt.subplots(figsize=figsize)
+    if bkg == 'k':
+        fig00.patch.set_facecolor('black')
+        ax00.set_facecolor('black')
+    ax00.plot(t, y, '.'+c, ms=1)
+    ax00.set_xlabel('Time [TJD]')
+    ax00.set_ylabel('Background-subtracted flux')
+    plt.tight_layout()
+    fig00.savefig(out_dir+suffix+'_raw_TESS.png', dpi=300)
+    print('Saved '+out_dir+suffix+'_raw_TESS.png')
+
+    t, y, cn = rm_qflag(t, y, cn, qflag_dir, sector, cam, ccd)    
+    t, y, flag = prep_lc(t, y, n_std=10)
     
     y, _ = normalize_lc(y)
+
+    fig00, ax00=plt.subplots(figsize=figsize)    
+    if bkg == 'k':
+        fig00.patch.set_facecolor('black')
+        ax00.set_facecolor('black')
+        
+    ax00.plot(t, y, '.'+c, ms=1)
+    ax00.set_xlabel('Time [TJD]')
+    ax00.set_ylabel('Relative flux')
+    plt.tight_layout()
+    fig00.savefig(out_dir+suffix+'_norm_TESS.png', dpi=300)
+    print('Saved '+out_dir+suffix+'_norm_TESS.png')    
+
     folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins)
 
     
     fig00, ax00=plt.subplots(figsize=figsize)
+
+    if bkg == 'k':
+        fig00.patch.set_facecolor('black')
+        ax00.set_facecolor('black')
+    
     folded_t, folded_y, folded_dy = bin_timeseries(t%per, y, bins)
-    plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+    plot_phase_curve(ax00, folded_t, folded_y, folded_dy,
                      ylabel="TESS Relative Flux")
+    # plot_phase_curve(ax00, folded_t, folded_y, folded_dy, period=per,
+    #                  ylabel="TESS Relative Flux")    
     fig00.savefig(out_dir+suffix+'_binned_TESS.png', dpi=300)
     print('Saved '+out_dir+suffix+'_binned_TESS.png')
+
+    
 
 
 # # ------------------------------------------------------------------------------

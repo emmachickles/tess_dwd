@@ -27,6 +27,7 @@ dec_max = -25
 # Load Gaia white dwarf results 
 # ticid, ra, dec, power, snr, wid, per, nt, dphi, dur
 result_list = append_result_file(data_dir, sector_list)
+pdb.set_trace()
 
 # Apply cut
 good_idx = np.nonzero( (result_list[:,6]<per_max/1440.) * \
