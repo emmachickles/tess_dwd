@@ -614,7 +614,7 @@ if len(sys.argv) > 1:
 # -- RUN SETTINGS --------------------------------------------------------------
 
 tica = True
-cam = 2
+cam = 4
 
 # ccd = 2
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,
