@@ -13,14 +13,15 @@ sector_list = [56,57,58,59,60,61,62,63,64,65]
 bins=100
 figsize=(5,2)
 
-dur_min = 3 # min
-dur_max = 8 # min
-per_min = 60
-per_max = 120 # min
-nt_min = 50
+dur_min = 1 # min 3
+dur_max = 3 # min 8
+per_min = 30
+per_max = 60 # min
+nt_min = 20 # 50
 dphi_max = 0.03
 pow_min = 25
 wid_min = 6
+dec_min = -30
 dec_max = -25
 
 # Load Gaia white dwarf results 
@@ -37,7 +38,8 @@ good_idx = np.nonzero( (result_list[:,6]<per_max/1440.) * \
                        (result_list[:,5]>wid_min) * \
                        (result_list[:,9]>dur_min) *\
                        (result_list[:,9]<dur_max) * \
-                       (result_list[:,2]<dec_max))
+                       (result_list[:,2]>dec_min) )
+#                        (result_list[:,2]<dec_max))
 
 ra_list = result_list[:,1][good_idx]
 dec_list = result_list[:,2][good_idx]

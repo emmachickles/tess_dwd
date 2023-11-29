@@ -9,6 +9,11 @@ qmin = 0.01
 qmax = 0.15
 
 # output_dir = "/scratch/echickle/out/"
+# ticid = [2007058836]
+# sector = [56]
+# cam = [2]
+# ccd = [2]
+
 output_dir = '/home/echickle/out/'
 ticid = [741451769]
 sector = [57]
@@ -18,7 +23,6 @@ ticid = [1987822499]
 sector = [67]
 cam = [3]
 ccd = [2]
-
 
 # output_dir = "/scratch/echickle/BLS_Test_Nonastro/"
 # ticid  = [836153158, 830748654, 778219027, 154178878, 803454388, 803568171]
