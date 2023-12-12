@@ -581,7 +581,7 @@ def run_ccd(p, catalog_main, ticid_main, cam, ccd, out_dir, mult_output=False,
 
 # ------------------------------------------------------------------------------
 
-sector = 71
+sector = 72
 
 sect_dir  = '/home/echickle/data/s%04d/'%sector
 data_dir  = sect_dir+'s%04d/'%sector
@@ -614,7 +614,7 @@ if len(sys.argv) > 1:
 # -- RUN SETTINGS --------------------------------------------------------------
 
 tica = True
-cam = 4
+cam = 2
 
 # ccd = 2
 # run_lc_extraction(data_dir, out_dir, wd_cat, cam=cam, ccd=ccd,

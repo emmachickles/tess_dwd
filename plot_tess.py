@@ -8,7 +8,7 @@ tess_dir = "/home/echickle/data/"
 qflag_dir = "/home/echickle/data/QLPqflags/"
 
 bins=150
-ztf=False
+ztf=True
 n_std=10
 figsize=(5,2)
 
@@ -21,9 +21,9 @@ ra_list = [285.3559028]
 dec_list = [53.1581301]
 per_list = [0.0281957]
 
-ra_list = [121.1748862]
-dec_list = [-2.262534927]
-per_list = [174.2140955/1440]
+ra_list = [334.127108]
+dec_list = [10.9982166]
+per_list = [156.51230076/1440]
 
 bkg = 'w'
 c= 'k'
